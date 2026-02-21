@@ -1,0 +1,32 @@
+# Claude
+CLAUDE.md
+
+# Dependencies
+node_modules/
+
+# Build outpu
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Extension packaging
+*.crx
+*.pem

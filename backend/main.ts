@@ -75,6 +75,7 @@ function corsJson(data: object, status = 200) {
 }
 
 async function publisher(url: string): Response {
+	try {
     if (Object.keys(database).includes(url)) {
 	    const entry = database[url];
 	    if (entry.publisher && entry.publisher.content && !entry.publisher.waiting) {
@@ -84,7 +85,10 @@ async function publisher(url: string): Response {
 		    }, yesCache);
 	    }
     }
-    const msg = await anthropic.messages.stream({
+    let msg;
+    let finalMsg;
+    try {
+    msg = await anthropic.messages.stream({
 	model: "claude-haiku-4-5",
 	tools: [{
       type: "web_search_20250305",
@@ -110,8 +114,7 @@ async function publisher(url: string): Response {
 	},
 	max_tokens: 500
     });
-    try {
-    const finalMsg = await msg.finalMessage();
+    finalMsg = await msg.finalMessage();
     } catch (e) {
 	    console.error(e);
 	    return Response.json({
@@ -132,7 +135,10 @@ async function publisher(url: string): Response {
 	ready: true,
 	data: output
     }, yesCache);
-
+	} catch (e) {
+		console.error(e);
+		return Response.json({}, { status: 400 });
+	}
 }
 
 const noCache = {
@@ -147,6 +153,7 @@ const yesCache = {
 };
 
 async function analyze(url: string, text: string): Response {
+	try {
     if (Object.keys(database).includes(url)) {
 	    const entry = database[url];
 	    if (entry.analysis) {
@@ -157,7 +164,6 @@ async function analyze(url: string, text: string): Response {
 			    }, noCache);
 		    } else if (entry.analysis.content) {
 			    if (entry.analysis.content === null) {
-				    entry.analysis = undefined;
 				    return Response.json({
 					    ready: true,
 					    data: null
@@ -172,7 +178,11 @@ async function analyze(url: string, text: string): Response {
 		    }
 	    }
     }
-    const msg = anthropic.messages.stream({
+
+    let msg;
+    let finalMsg;
+
+    try{ msg = anthropic.messages.stream({
 	model: "claude-opus-4-6",
 	tools: [{
 	      type: "web_search_20250305",
@@ -228,7 +238,6 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
     - Do not let these rules affect your ratings - be critical.
 
     Overall Tone and Overall Factuality should be single-word ratings.
-
 	    You should be VERY critical of sites with anything lower than a 'Factual' rating according to Media Bias/ Fact Check. However, do not provide entirely unnessecary flags; if an article is well-written, you are not required to flag something.
 `,
 	messages: [
@@ -242,7 +251,20 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 	},
 	max_tokens: 4000
     });
-    const finalMsg = msg.finalMessage();
+     finalMsg = msg.finalMessage();
+    } catch (e) {
+	    console.error(e);
+	    return Response.json({
+		    ready: true,
+		    data: null
+	    });
+    }
+    if (Object.keys(database).includes(url)) {
+	    return Response.json({
+		    ready: false,
+		    data: null
+	    });
+    }
     console.log('started analysis for ' + url);
     database[url] = {
 	    analysis: {
@@ -271,6 +293,10 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 	ready: false,
 	data: null
     }, noCache);
+	} catch (e) {
+		console.error('fail!', e);
+		return Response.json({}, { status: 400 });
+	}
 }
 
 const server = Bun.serve({

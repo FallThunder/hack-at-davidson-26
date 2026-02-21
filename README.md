@@ -1,39 +1,40 @@
-# Cross-Browser Extension Starter Pack
+# Smart Page Analyzer
 
-A comprehensive starter template for building browser extensions that work across Chrome, Firefox, Safari, and Edge.
+An intelligent browser extension that automatically detects news articles and analyzes website popularity across all major browsers.
 
 ## 🚀 Features
 
-- **Cross-browser compatibility** - Works on Chrome, Firefox, Edge, and Safari
-- **Modern manifest v3** - Uses the latest extension API standards
-- **Beautiful popup UI** - Modern, responsive design with gradient styling
-- **Content script integration** - Interact with web pages seamlessly
-- **Background script** - Handle extension lifecycle and background tasks
-- **Context menus** - Right-click functionality on web pages
-- **Local storage** - Persist data across browser sessions
-- **Notification system** - Show in-page notifications
-- **Element highlighting** - Visual page interaction features
+- **🤖 Intelligent News Detection** - Automatically identifies news articles with confidence scoring
+- **🌟 Site Popularity Analysis** - Categorizes websites from major to unknown based on multiple factors
+- **📊 Real-time Analysis** - Instant page analysis with detailed metrics and insights
+- **🔍 Content Intelligence** - Analyzes article structure, metadata, and content patterns
+- **🎯 Smart Notifications** - Alerts for high-confidence news on lesser-known sites
+- **📱 Beautiful Interface** - Modern, responsive popup with detailed analysis results
+- **🌐 Cross-browser compatibility** - Works on Chrome, Firefox, Edge, and Safari
+- **⚡ Performance Optimized** - Efficient analysis with intelligent caching
 
 ## 📁 Project Structure
 
 ```
-├── manifest.json           # Extension configuration
+├── manifest.json              # Extension configuration (Manifest V3)
+├── manifest-firefox.json     # Firefox-compatible manifest (V2)
 ├── popup/
-│   ├── popup.html          # Extension popup interface
-│   ├── popup.css           # Popup styling
-│   └── popup.js            # Popup functionality
+│   ├── popup.html            # Analysis results interface
+│   ├── popup.css             # Modern UI styling
+│   └── popup.js              # Analysis display logic
 ├── content/
-│   └── content.js          # Content script for page interaction
+│   ├── content-analyzer.js   # Intelligent content analysis engine
+│   └── content.js            # Content script integration
 ├── background/
-│   └── background.js       # Background/service worker script
+│   ├── background.js         # Chrome/Edge background script
+│   └── background-firefox.js # Firefox-compatible background script
 ├── icons/
-│   ├── icon.svg            # Source SVG icon
-│   ├── generate-icons.html # Icon generation tool
-│   ├── icon16.png          # 16x16 icon (placeholder)
-│   ├── icon32.png          # 32x32 icon (placeholder)
-│   ├── icon48.png          # 48x48 icon (placeholder)
-│   └── icon128.png         # 128x128 icon (placeholder)
-└── README.md               # This file
+│   ├── icon.svg              # Source SVG icon
+│   ├── generate-icons.html   # Icon generation tool
+│   └── icon*.png             # Generated icons (16, 32, 48, 128px)
+├── build.sh                  # Cross-browser build script
+├── package.json              # Project configuration
+└── README.md                 # This documentation
 ```
 
 ## 🛠️ Installation & Development
@@ -85,55 +86,66 @@ The extension includes placeholder icons. To create proper icons:
 
 ## 🔧 Key Features Explained
 
-### Popup Interface
-- Clean, modern design with gradient styling
-- Action buttons for common tasks
-- Status display and settings access
-- Responsive layout that works across browsers
+### 🤖 Intelligent News Detection
+The extension uses multiple analysis techniques to identify news articles:
 
-### Content Script
-- Injects into all web pages
-- Provides page analysis and interaction capabilities
-- Shows in-page notifications
-- Highlights page elements
-- Communicates with popup and background scripts
+- **Structured Data Analysis** - Parses JSON-LD and meta tags for article information
+- **Content Pattern Recognition** - Analyzes article structure, word count, and formatting
+- **URL Pattern Analysis** - Detects news-specific URL patterns and date structures
+- **Element Detection** - Identifies bylines, timestamps, and news-specific CSS classes
+- **Confidence Scoring** - Provides 0-100% confidence ratings for news detection
 
-### Background Script
-- Handles extension installation and updates
-- Manages context menus and alarms
-- Performs periodic cleanup tasks
-- Coordinates between popup and content scripts
+### 🌟 Site Popularity Analysis
+Multi-factor analysis to determine website popularity and credibility:
 
-### Cross-Browser Compatibility
-- Uses Manifest V3 for modern browsers
-- Includes fallbacks for different browser APIs
-- Consistent behavior across Chrome, Firefox, Edge, and Safari
+- **Domain Recognition** - Database of major news outlets and popular websites
+- **Domain Characteristics** - TLD analysis, domain length, and structure patterns
+- **Performance Metrics** - Load times, SSL status, and technical indicators
+- **Social Presence** - Detection of social media integration and sharing features
+
+### 📊 Real-time Analysis Interface
+Modern popup interface displaying:
+
+- **News Article Status** - Visual indicators with confidence percentages
+- **Site Popularity Badges** - Color-coded popularity levels (Major, Established, Moderate, Emerging, Unknown)
+- **Article Metadata** - Author, publish date, word count, and paragraph analysis
+- **Site Metrics** - Performance data, security status, and technical details
+
+### 🎯 Smart Notifications
+- **Badge Indicators** - Extension icon shows 📰 for detected news articles
+- **Desktop Notifications** - Alerts for high-confidence news on lesser-known sites
+- **Contextual Information** - Hover tooltips with analysis summaries
 
 ## 📋 Available Actions
 
-### Popup Actions
-- **Take Action**: Demonstrates communication with content script
-- **Settings**: Opens extension settings (extensible)
+### Popup Interface
+- **Automatic Analysis**: Page analysis runs automatically when popup opens
+- **Re-analyze Page**: Force refresh of analysis for dynamic content
+- **Take Action**: Perform custom actions on the current page
+- **Settings**: Access extension configuration options
 
 ### Context Menu Actions
-- **Get Page Info**: Analyzes current page statistics
-- **Highlight Headings**: Visually highlights all headings on the page
-- **Analyze Selection**: Analyzes selected text
+- **Get Page Info**: Detailed page statistics and metadata
+- **Highlight Headings**: Visual highlighting of page structure
+- **Analyze Selection**: Text analysis for selected content
 
-### Content Script Features
-- Page information extraction
-- Element highlighting with numbered badges
-- In-page notification system
-- Click tracking and interaction monitoring
+### Analysis Features
+- **News Article Detection**: Automatic identification with confidence scoring
+- **Site Popularity Assessment**: Categorization from major to unknown sites
+- **Content Metrics**: Word count, paragraph analysis, and structure evaluation
+- **Performance Analysis**: Load times, SSL status, and technical metrics
+- **Metadata Extraction**: Author information, publish dates, and article data
 
 ## 🔒 Permissions
 
-The extension requests minimal permissions:
+The extension requests minimal permissions for maximum privacy:
 
-- `activeTab`: Access to the currently active tab
-- `storage`: Local data storage
-- `contextMenus`: Right-click menu integration (implicit)
-- `notifications`: System notifications (implicit)
+- **`activeTab`**: Access to analyze the currently active tab only
+- **`storage`**: Local data storage for analysis caching and settings
+- **`notifications`**: Desktop notifications for interesting findings
+- **`contextMenus`**: Right-click menu integration (implicit)
+
+**Privacy Note**: All analysis is performed locally in your browser. No data is sent to external servers.
 
 ## 🚀 Publishing
 

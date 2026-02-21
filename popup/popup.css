@@ -5,8 +5,8 @@
 }
 
 body {
-    width: 350px;
-    min-height: 400px;
+    width: 400px;
+    min-height: 500px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #333;
@@ -120,4 +120,214 @@ body {
 .footer small {
     color: #999;
     font-size: 12px;
+}
+
+/* Analysis Section Styles */
+.analysis-section {
+    margin-bottom: 20px;
+}
+
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #666;
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #e9ecef;
+    border-top: 2px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.analysis-results {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.analysis-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #e9ecef;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.card-header .icon {
+    font-size: 18px;
+}
+
+.card-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+}
+
+.card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* News Detection Styles */
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dc3545;
+}
+
+.status-dot.news {
+    background: #28a745;
+}
+
+.status-dot.maybe {
+    background: #ffc107;
+}
+
+.status-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+}
+
+.confidence-bar {
+    position: relative;
+    background: #e9ecef;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #dc3545 0%, #ffc107 50%, #28a745 100%);
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 3px;
+}
+
+.confidence-text {
+    font-size: 11px;
+    color: #666;
+    font-weight: 500;
+}
+
+.details {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.details .detail-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+/* Site Popularity Styles */
+.popularity-level {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.level-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.level-badge.major {
+    background: #28a745;
+    color: white;
+}
+
+.level-badge.established {
+    background: #17a2b8;
+    color: white;
+}
+
+.level-badge.moderate {
+    background: #ffc107;
+    color: #212529;
+}
+
+.level-badge.emerging {
+    background: #fd7e14;
+    color: white;
+}
+
+.level-badge.unknown {
+    background: #6c757d;
+    color: white;
+}
+
+.level-description {
+    font-size: 12px;
+    color: #666;
+}
+
+.site-metrics {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.site-metrics .metric-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+/* Error Message */
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 6px;
+    color: #721c24;
+}
+
+.error-message .icon {
+    font-size: 18px;
+}
+
+.error-message p {
+    margin: 0;
+    font-size: 14px;
 }

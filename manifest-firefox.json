@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Cross-Browser Extension Starter",
+  "name": "Smart Page Analyzer",
   "version": "1.0.0",
-  "description": "A starter template for cross-browser extensions",
+  "description": "Intelligently detects news articles and analyzes site popularity",
   
   "permissions": [
     "activeTab",
@@ -13,7 +13,7 @@
   
   "browser_action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Extension Starter",
+    "default_title": "Smart Page Analyzer",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -37,7 +37,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content/content.js"],
+      "js": ["content/content-analyzer.js", "content/content.js"],
       "run_at": "document_end"
     }
   ],

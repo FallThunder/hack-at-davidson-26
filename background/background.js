@@ -247,6 +247,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ success: true });
             break;
             
+        case 'pageAnalysisComplete':
+            handlePageAnalysis(message.analysis, sender.tab);
+            sendResponse({ success: true });
+            break;
+            
         case 'getExtensionInfo':
             sendResponse({
                 version: chrome.runtime.getManifest().version,
@@ -261,6 +266,79 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     return true; // Keep message channel open for async response
 });
+
+// Handle page analysis results
+async function handlePageAnalysis(analysis, tab) {
+    console.log('Page analysis received:', analysis);
+    
+    try {
+        // Store analysis in local storage
+        await chrome.storage.local.set({
+            [`analysis_${tab.id}`]: {
+                ...analysis,
+                tabId: tab.id,
+                tabUrl: tab.url,
+                analyzedAt: Date.now()
+            }
+        });
+        
+        // Update badge based on analysis
+        updateExtensionBadge(analysis, tab.id);
+        
+        // Send notification for interesting findings
+        if (analysis.isNewsArticle && analysis.newsConfidence > 70) {
+            const popularity = analysis.sitePopularity;
+            const domain = analysis.domain;
+            
+            // Only show notification for lesser-known sites with high-confidence news
+            if (popularity === 'unknown' || popularity === 'emerging') {
+                chrome.notifications.create({
+                    type: 'basic',
+                    iconUrl: 'icons/icon48.png',
+                    title: 'News Article Detected',
+                    message: `High-confidence news article found on ${domain} (${popularity} site)`
+                });
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error handling page analysis:', error);
+    }
+}
+
+// Update extension badge based on analysis
+function updateExtensionBadge(analysis, tabId) {
+    if (analysis.isNewsArticle) {
+        // Show news indicator
+        chrome.action.setBadgeText({ 
+            text: '📰', 
+            tabId: tabId 
+        });
+        chrome.action.setBadgeBackgroundColor({ 
+            color: '#28a745',
+            tabId: tabId 
+        });
+        
+        // Update title to show analysis
+        const confidence = Math.round(analysis.newsConfidence);
+        const popularity = analysis.sitePopularity;
+        chrome.action.setTitle({ 
+            title: `Smart Page Analyzer\nNews Article (${confidence}% confidence)\nSite: ${popularity}`,
+            tabId: tabId 
+        });
+    } else {
+        // Clear badge for non-news pages
+        chrome.action.setBadgeText({ 
+            text: '', 
+            tabId: tabId 
+        });
+        
+        chrome.action.setTitle({ 
+            title: `Smart Page Analyzer\nSite: ${analysis.sitePopularity}`,
+            tabId: tabId 
+        });
+    }
+}
 
 // Handle tab updates (navigation, refresh, etc.)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {

@@ -10,19 +10,67 @@
     <div class="container">
         <div class="header">
             <img src="../icons/icon48.png" alt="Extension Icon" class="logo">
-            <h1>Extension Starter</h1>
+            <h1>Smart Page Analyzer</h1>
         </div>
         
         <div class="content">
-            <p>Welcome to your cross-browser extension!</p>
+            <!-- Page Analysis Section -->
+            <div class="analysis-section" id="analysisSection">
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Analyzing page...</p>
+                </div>
+                
+                <div class="analysis-results" id="analysisResults" style="display: none;">
+                    <!-- News Article Detection -->
+                    <div class="analysis-card" id="newsCard">
+                        <div class="card-header">
+                            <span class="icon">📰</span>
+                            <h3>News Article Detection</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="status-indicator" id="newsStatus">
+                                <span class="status-dot"></span>
+                                <span class="status-text">Not a news article</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="newsConfidence"></div>
+                                <span class="confidence-text" id="newsConfidenceText">0%</span>
+                            </div>
+                            <div class="details" id="newsDetails"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Site Popularity -->
+                    <div class="analysis-card" id="popularityCard">
+                        <div class="card-header">
+                            <span class="icon">🌟</span>
+                            <h3>Site Popularity</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="popularity-level" id="popularityLevel">
+                                <span class="level-badge">Unknown</span>
+                                <span class="level-description">Analyzing...</span>
+                            </div>
+                            <div class="site-metrics" id="siteMetrics"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="error-message" id="errorMessage" style="display: none;">
+                    <span class="icon">⚠️</span>
+                    <p>Could not analyze this page</p>
+                </div>
+            </div>
             
             <div class="buttons">
-                <button id="actionBtn" class="btn primary">Take Action</button>
+                <button id="analyzeBtn" class="btn primary">Re-analyze Page</button>
+                <button id="actionBtn" class="btn secondary">Take Action</button>
                 <button id="settingsBtn" class="btn secondary">Settings</button>
             </div>
             
             <div class="info">
-                <p id="statusText">Ready to go!</p>
+                <p id="statusText">Ready to analyze!</p>
             </div>
         </div>
         

@@ -12,6 +12,52 @@
 
     console.log('Extension content script loaded on:', window.location.href);
 
+    // Initialize content analyzer
+    let contentAnalyzer = null;
+    let currentPageAnalysis = null;
+
+    // Load the content analyzer
+    function loadContentAnalyzer() {
+        if (typeof ContentAnalyzer !== 'undefined') {
+            contentAnalyzer = new ContentAnalyzer();
+            performInitialAnalysis();
+        } else {
+            // ContentAnalyzer not loaded yet, try again in a moment
+            setTimeout(loadContentAnalyzer, 100);
+        }
+    }
+
+    // Perform initial page analysis
+    async function performInitialAnalysis() {
+        if (!contentAnalyzer) return;
+        
+        try {
+            currentPageAnalysis = await contentAnalyzer.analyzeCurrentPage();
+            console.log('Page analysis complete:', currentPageAnalysis);
+            
+            // Send analysis to background script
+            chrome.runtime.sendMessage({
+                action: 'pageAnalysisComplete',
+                analysis: currentPageAnalysis
+            }).catch(error => {
+                console.log('Could not send analysis to background:', error.message);
+            });
+            
+            // Show analysis notification if it's a news article
+            if (currentPageAnalysis.isNewsArticle) {
+                const confidence = Math.round(currentPageAnalysis.newsConfidence);
+                const popularity = currentPageAnalysis.sitePopularity;
+                showNotification(
+                    `📰 News Article Detected (${confidence}% confidence) - Site: ${popularity}`, 
+                    'info'
+                );
+            }
+            
+        } catch (error) {
+            console.error('Error during page analysis:', error);
+        }
+    }
+
     // Listen for messages from popup or background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log('Content script received message:', message);
@@ -25,6 +71,46 @@
             case 'getPageInfo':
                 const pageInfo = getPageInfo();
                 sendResponse(pageInfo);
+                break;
+                
+            case 'getPageAnalysis':
+                if (currentPageAnalysis) {
+                    sendResponse(currentPageAnalysis);
+                } else if (contentAnalyzer) {
+                    contentAnalyzer.analyzeCurrentPage().then(analysis => {
+                        currentPageAnalysis = analysis;
+                        sendResponse(analysis);
+                    }).catch(error => {
+                        sendResponse({ error: error.message });
+                    });
+                } else {
+                    sendResponse({ error: 'Content analyzer not ready' });
+                }
+                break;
+                
+            case 'analyzeNewsArticle':
+                if (contentAnalyzer) {
+                    contentAnalyzer.analyzeNewsArticle().then(result => {
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ error: error.message });
+                    });
+                } else {
+                    sendResponse({ error: 'Content analyzer not ready' });
+                }
+                break;
+                
+            case 'analyzeSitePopularity':
+                if (contentAnalyzer) {
+                    const domain = contentAnalyzer.extractDomain(window.location.href);
+                    contentAnalyzer.analyzeSitePopularity(domain).then(result => {
+                        sendResponse(result);
+                    }).catch(error => {
+                        sendResponse({ error: error.message });
+                    });
+                } else {
+                    sendResponse({ error: 'Content analyzer not ready' });
+                }
                 break;
                 
             case 'highlightElements':
@@ -206,6 +292,30 @@
     // Initialize content script
     function init() {
         console.log('Extension content script initialized');
+        
+        // Load content analyzer
+        loadContentAnalyzer();
+        
+        // Listen for page navigation changes (for SPAs)
+        let currentUrl = window.location.href;
+        const observer = new MutationObserver(() => {
+            if (window.location.href !== currentUrl) {
+                currentUrl = window.location.href;
+                console.log('URL changed, re-analyzing page:', currentUrl);
+                
+                // Clear previous analysis and re-analyze
+                currentPageAnalysis = null;
+                if (contentAnalyzer) {
+                    contentAnalyzer.clearCache();
+                    setTimeout(performInitialAnalysis, 1000); // Wait for page to load
+                }
+            }
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
         
         // Example: Listen for specific page events
         document.addEventListener('click', function(event) {

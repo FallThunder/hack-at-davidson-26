@@ -162,6 +162,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         newsDetails.innerHTML = detailsHtml;
+
+        // Update last updated time
+        const lastUpdated = document.getElementById('lastUpdated');
+        if (lastUpdated) {
+            lastUpdated.textContent = `Last analyzed: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        }
     }
 
     // Display site popularity analysis

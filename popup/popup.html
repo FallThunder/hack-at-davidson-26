@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extension Starter</title>
+    <title>Smart Page Analyzer</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <img src="../icons/icon48.png" alt="Extension Icon" class="logo">
-            <h1>Smart Page Analyzer</h1>
-        </div>
+        <header class="header">
+            <div class="header-left">
+                <img src="../icons/icon48.png" alt="Extension Icon" class="logo">
+                <h1>Smart Page Analyzer</h1>
+            </div>
+            <div class="header-right">
+                <button id="settingsBtn" class="btn-icon" title="Settings">⚙️</button>
+            </div>
+        </header>
         
-        <div class="content">
+        <main class="content">
             <!-- Page Analysis Section -->
-            <div class="analysis-section" id="analysisSection">
+            <section class="analysis-section" id="analysisSection">
                 <div class="loading" id="loadingIndicator">
                     <div class="spinner"></div>
                     <p>Analyzing page...</p>
@@ -26,16 +31,21 @@
                     <div class="analysis-card" id="newsCard">
                         <div class="card-header">
                             <span class="icon">📰</span>
-                            <h3>News Article Detection</h3>
+                            <h3>News Detection</h3>
                         </div>
                         <div class="card-content">
                             <div class="status-indicator" id="newsStatus">
                                 <span class="status-dot"></span>
                                 <span class="status-text">Not a news article</span>
                             </div>
-                            <div class="confidence-bar">
-                                <div class="confidence-fill" id="newsConfidence"></div>
-                                <span class="confidence-text" id="newsConfidenceText">0%</span>
+                            <div class="confidence-container">
+                                <div class="confidence-label">
+                                    <span>Confidence Score</span>
+                                    <span id="newsConfidenceText">0%</span>
+                                </div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="newsConfidence"></div>
+                                </div>
                             </div>
                             <div class="details" id="newsDetails"></div>
                         </div>
@@ -49,7 +59,7 @@
                         </div>
                         <div class="card-content">
                             <div class="popularity-level" id="popularityLevel">
-                                <span class="level-badge">Unknown</span>
+                                <span class="level-badge unknown">Unknown</span>
                                 <span class="level-description">Analyzing...</span>
                             </div>
                             <div class="site-metrics" id="siteMetrics"></div>
@@ -61,22 +71,26 @@
                     <span class="icon">⚠️</span>
                     <p>Could not analyze this page</p>
                 </div>
-            </div>
+            </section>
             
             <div class="buttons">
-                <button id="analyzeBtn" class="btn primary">Re-analyze Page</button>
-                <button id="actionBtn" class="btn secondary">Take Action</button>
-                <button id="settingsBtn" class="btn secondary">Settings</button>
+                <button id="analyzeBtn" class="btn primary">
+                    <span>🔄</span> Re-analyze Page
+                </button>
+                <button id="actionBtn" class="btn secondary">
+                    <span>⚡</span> Take Action
+                </button>
             </div>
             
             <div class="info">
                 <p id="statusText">Ready to analyze!</p>
             </div>
-        </div>
+        </main>
         
-        <div class="footer">
+        <footer class="footer">
             <small>Version 1.0.0</small>
-        </div>
+            <small id="lastUpdated"></small>
+        </footer>
     </div>
     
     <script src="popup.js"></script>

@@ -71,53 +71,85 @@ async function handleUpdate(previousVersion) {
 async function initializeExtension() {
     console.log('Initializing extension...');
     
-    // Check if extension is enabled
-    const result = await chrome.storage.local.get(['extensionEnabled']);
-    if (result.extensionEnabled === false) {
-        console.log('Extension is disabled');
-        return;
+    try {
+        // Check if extension is enabled
+        const result = await chrome.storage.local.get(['extensionEnabled']);
+        if (result.extensionEnabled === false) {
+            console.log('Extension is disabled');
+            return;
+        }
+        
+        // Set up context menus
+        setupContextMenus();
+        
+        // Set up alarms if needed
+        setupAlarms();
+        
+        console.log('Extension initialization completed successfully');
+    } catch (error) {
+        console.error('Error during extension initialization:', error);
     }
-    
-    // Set up context menus
-    setupContextMenus();
-    
-    // Set up alarms if needed
-    setupAlarms();
 }
 
 // Set up context menus
 function setupContextMenus() {
-    // Remove existing menus
-    chrome.contextMenus.removeAll(() => {
-        // Add main menu item
-        chrome.contextMenus.create({
-            id: 'main-menu',
-            title: 'Extension Starter',
-            contexts: ['page', 'selection']
+    try {
+        // Remove existing menus
+        chrome.contextMenus.removeAll(() => {
+            if (chrome.runtime.lastError) {
+                console.log('Context menu removal error:', chrome.runtime.lastError);
+                return;
+            }
+            
+            // Add main menu item
+            chrome.contextMenus.create({
+                id: 'main-menu',
+                title: 'Smart Page Analyzer',
+                contexts: ['page', 'selection']
+            }, () => {
+                if (chrome.runtime.lastError) {
+                    console.log('Context menu creation error:', chrome.runtime.lastError);
+                    return;
+                }
+            });
+            
+            // Add submenu items
+            chrome.contextMenus.create({
+                id: 'get-page-info',
+                parentId: 'main-menu',
+                title: 'Get Page Info',
+                contexts: ['page']
+            }, () => {
+                if (chrome.runtime.lastError) {
+                    console.log('Context menu creation error:', chrome.runtime.lastError);
+                }
+            });
+            
+            chrome.contextMenus.create({
+                id: 'highlight-headings',
+                parentId: 'main-menu',
+                title: 'Highlight Headings',
+                contexts: ['page']
+            }, () => {
+                if (chrome.runtime.lastError) {
+                    console.log('Context menu creation error:', chrome.runtime.lastError);
+                }
+            });
+            
+            chrome.contextMenus.create({
+                id: 'analyze-selection',
+                parentId: 'main-menu',
+                title: 'Analyze Selection',
+                contexts: ['selection']
+            }, () => {
+                if (chrome.runtime.lastError) {
+                    console.log('Context menu creation error:', chrome.runtime.lastError);
+                }
+            });
         });
-        
-        // Add submenu items
-        chrome.contextMenus.create({
-            id: 'get-page-info',
-            parentId: 'main-menu',
-            title: 'Get Page Info',
-            contexts: ['page']
-        });
-        
-        chrome.contextMenus.create({
-            id: 'highlight-headings',
-            parentId: 'main-menu',
-            title: 'Highlight Headings',
-            contexts: ['page']
-        });
-        
-        chrome.contextMenus.create({
-            id: 'analyze-selection',
-            parentId: 'main-menu',
-            title: 'Analyze Selection',
-            contexts: ['selection']
-        });
-    });
+    } catch (error) {
+        console.error('Error setting up context menus:', error);
+    }
 }
 
 // Handle context menu clicks
@@ -180,14 +212,23 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 // Set up alarms for periodic tasks
 function setupAlarms() {
-    // Clear existing alarms
-    chrome.alarms.clearAll();
-    
-    // Create a daily cleanup alarm
-    chrome.alarms.create('dailyCleanup', {
-        delayInMinutes: 1, // First run after 1 minute
-        periodInMinutes: 24 * 60 // Then every 24 hours
-    });
+    try {
+        // Clear existing alarms
+        chrome.alarms.clearAll(() => {
+            if (chrome.runtime.lastError) {
+                console.log('Alarm clear error:', chrome.runtime.lastError);
+                return;
+            }
+            
+            // Create a daily cleanup alarm
+            chrome.alarms.create('dailyCleanup', {
+                delayInMinutes: 1, // First run after 1 minute
+                periodInMinutes: 24 * 60 // Then every 24 hours
+            });
+        });
+    } catch (error) {
+        console.error('Error setting up alarms:', error);
+    }
 }
 
 // Handle alarms

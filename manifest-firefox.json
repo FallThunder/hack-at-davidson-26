@@ -8,7 +8,8 @@
     "activeTab",
     "storage",
     "contextMenus",
-    "notifications"
+    "notifications",
+    "alarms"
   ],
   
   "browser_action": {

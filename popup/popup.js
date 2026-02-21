@@ -51,9 +51,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load and display page analysis
     async function loadPageAnalysis(forceRefresh = false) {
         showLoading();
+        updateLoadingText('Analyzing article...', 'Extracting content and detecting patterns');
         
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            
+            // Update loading for AI analysis
+            setTimeout(() => {
+                updateLoadingText('AI Analysis in progress...', 'Checking for bias and fact-checking claims');
+            }, 1000);
             
             // Get page analysis from content script
             const analysis = await chrome.tabs.sendMessage(tab.id, {
@@ -62,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (analysis && !analysis.error) {
                 displayAnalysis(analysis);
-                updateStatus('Analysis complete!', 'success');
+                updateStatus('AI analysis complete!', 'success');
             } else {
                 showError(analysis?.error || 'Could not analyze page');
                 updateStatus('Analysis failed', 'error');
@@ -73,6 +79,15 @@ document.addEventListener('DOMContentLoaded', function() {
             showError('Extension not ready on this page');
             updateStatus('Analysis error', 'error');
         }
+    }
+
+    // Update loading text
+    function updateLoadingText(mainText, subText) {
+        const loadingTextEl = document.getElementById('loadingText');
+        const loadingSubtextEl = document.getElementById('loadingSubtext');
+        
+        if (loadingTextEl) loadingTextEl.textContent = mainText;
+        if (loadingSubtextEl) loadingSubtextEl.textContent = subText;
     }
 
     // Show loading state
@@ -140,14 +155,30 @@ document.addEventListener('DOMContentLoaded', function() {
         politicalBias.textContent = formatBiasText(politicalBiasText);
         politicalBias.className = `metric-value ${politicalBiasText.replace('-', '')}`;
         
+        // Add reasoning tooltip if available
+        if (bias.reasoning) {
+            politicalBias.title = bias.reasoning;
+        }
+        
         // Update emotional manipulation
         const emotionalRisk = emotional.manipulationRisk || 'low';
         emotionalBias.textContent = formatBiasText(emotionalRisk);
         emotionalBias.className = `metric-value ${emotionalRisk}`;
         
+        // Add reasoning tooltip if available
+        if (emotional.reasoning) {
+            emotionalBias.title = emotional.reasoning;
+        }
+        
         // Update claims count
-        const claims = analysis.factCheckingData?.numericalClaims?.length || 0;
-        claimsCount.textContent = claims.toString();
+        const totalClaims = (analysis.factCheckingData?.numericalClaims?.length || 0) + 
+                           (analysis.factCheckingData?.factualClaims?.length || 0);
+        claimsCount.textContent = totalClaims.toString();
+        
+        // Add credibility score if available
+        if (analysis.factCheckingData?.credibilityScore) {
+            claimsCount.title = `Credibility Score: ${analysis.factCheckingData.credibilityScore}/100`;
+        }
     }
 
     // Display article details
@@ -186,6 +217,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Add AI insights if available
+        if (analysis.aiInsights) {
+            const insights = analysis.aiInsights;
+            
+            if (insights.overallAssessment) {
+                detailsHtml += `<div class="detail-row"><span class="detail-label">AI Assessment:</span><span class="detail-value">${escapeHtml(insights.overallAssessment)}</span></div>`;
+            }
+            
+            if (insights.redFlags && insights.redFlags.length > 0) {
+                detailsHtml += `<div class="detail-row"><span class="detail-label">Red Flags:</span><span class="detail-value">${insights.redFlags.length} found</span></div>`;
+            }
+            
+            if (insights.strengths && insights.strengths.length > 0) {
+                detailsHtml += `<div class="detail-row"><span class="detail-label">Strengths:</span><span class="detail-value">${insights.strengths.length} found</span></div>`;
+            }
+        }
+        
         articleDetails.innerHTML = detailsHtml;
     }
 
@@ -205,7 +253,13 @@ document.addEventListener('DOMContentLoaded', function() {
             biasAnalysis: analysis.biasAnalysis,
             emotionalAnalysis: analysis.emotionalAnalysis,
             articleData: analysis.articleData,
-            factCheckingData: analysis.factCheckingData
+            factCheckingData: analysis.factCheckingData,
+            aiInsights: analysis.aiInsights,
+            mainContent: {
+                wordCount: analysis.mainContent?.wordCount,
+                paragraphCount: analysis.mainContent?.paragraphs?.length,
+                claimsFound: analysis.mainContent?.claims?.length
+            }
         };
         
         const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });

@@ -1,6 +1,9 @@
-// Evident Content Analyzer - Advanced content extraction and bias analysis for fact-checking
+// Evident Content Analyzer - AI-powered content extraction and bias analysis for fact-checking
 class ContentAnalyzer {
     constructor() {
+        // Gemini AI API configuration
+        this.apiKey = 'AIzaSyD05HamtdStA4CGTrPmAfxG4L-R3LfYJ68';
+        this.apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
         this.newsIndicators = {
             // Common news article selectors
             selectors: [
@@ -128,11 +131,23 @@ class ContentAnalyzer {
             timestamp: Date.now()
         });
 
-        // Extract main content for bias analysis
+        // Extract main content for AI analysis
         analysis.mainContent = this.extractMainContent();
-        analysis.biasAnalysis = this.analyzeBias(analysis.mainContent);
-        analysis.emotionalAnalysis = this.analyzeEmotionalLanguage(analysis.mainContent);
-        analysis.factCheckingData = this.extractFactCheckingData();
+        
+        // Perform AI-powered analysis
+        try {
+            const aiAnalysis = await this.performAIAnalysis(analysis.mainContent, analysis.articleData);
+            analysis.biasAnalysis = aiAnalysis.biasAnalysis;
+            analysis.emotionalAnalysis = aiAnalysis.emotionalAnalysis;
+            analysis.factCheckingData = aiAnalysis.factCheckingData;
+            analysis.aiInsights = aiAnalysis.insights;
+        } catch (error) {
+            console.warn('AI analysis failed, falling back to pattern matching:', error);
+            // Fallback to pattern-based analysis
+            analysis.biasAnalysis = this.analyzeBias(analysis.mainContent);
+            analysis.emotionalAnalysis = this.analyzeEmotionalLanguage(analysis.mainContent);
+            analysis.factCheckingData = this.extractFactCheckingData();
+        }
 
         return analysis;
     }
@@ -1038,6 +1053,139 @@ class ContentAnalyzer {
         });
 
         return data;
+    }
+
+    // Perform AI-powered analysis using Gemini
+    async performAIAnalysis(content, articleData) {
+        if (!content.mainText || content.mainText.length < 100) {
+            throw new Error('Insufficient content for AI analysis');
+        }
+
+        const prompt = this.buildAnalysisPrompt(content, articleData);
+        
+        const requestBody = {
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }],
+            generationConfig: {
+                temperature: 0.1,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 1024,
+            }
+        };
+
+        const response = await fetch(`${this.apiEndpoint}?key=${this.apiKey}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`AI API request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const aiResponse = data.candidates[0].content.parts[0].text;
+        
+        return this.parseAIResponse(aiResponse);
+    }
+
+    // Build comprehensive analysis prompt for AI
+    buildAnalysisPrompt(content, articleData) {
+        const author = articleData?.author || 'Unknown';
+        const publisher = articleData?.publisher || 'Unknown';
+        const title = content.title || 'No title';
+        
+        return `You are Evident, an expert fact-checker and bias analyst. Analyze this news article for political bias, emotional manipulation, and factual claims that need verification.
+
+ARTICLE DETAILS:
+Title: ${title}
+Author: ${author}
+Publisher: ${publisher}
+Word Count: ${content.wordCount}
+
+ARTICLE TEXT:
+${content.mainText.substring(0, 3000)}
+
+Please provide your analysis in the following JSON format:
+
+{
+  "biasAnalysis": {
+    "politicalBias": "neutral|left-leaning|right-leaning",
+    "politicalScore": 0-100,
+    "reasoning": "Brief explanation of political bias assessment"
+  },
+  "emotionalAnalysis": {
+    "manipulationRisk": "low|medium|high",
+    "emotionalIntensity": 0-100,
+    "patterns": ["list of emotional manipulation patterns found"],
+    "reasoning": "Brief explanation of emotional analysis"
+  },
+  "factCheckingData": {
+    "numericalClaims": ["list of specific numerical claims to verify"],
+    "factualClaims": ["list of factual statements that should be verified"],
+    "sources": ["list of sources mentioned that should be verified"],
+    "credibilityScore": 0-100
+  },
+  "insights": {
+    "overallAssessment": "Brief overall assessment of article quality and trustworthiness",
+    "redFlags": ["list of concerning elements"],
+    "strengths": ["list of positive journalistic elements"]
+  }
+}
+
+Focus on being objective and providing specific examples from the text to support your analysis.`;
+    }
+
+    // Parse AI response and structure the data
+    parseAIResponse(aiResponse) {
+        try {
+            // Extract JSON from the response (AI might include extra text)
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('No JSON found in AI response');
+            }
+            
+            const parsed = JSON.parse(jsonMatch[0]);
+            
+            // Ensure all required fields exist with defaults
+            return {
+                biasAnalysis: {
+                    politicalBias: parsed.biasAnalysis?.politicalBias || 'neutral',
+                    politicalScore: parsed.biasAnalysis?.politicalScore || 0,
+                    reasoning: parsed.biasAnalysis?.reasoning || 'No bias detected',
+                    ...parsed.biasAnalysis
+                },
+                emotionalAnalysis: {
+                    manipulationRisk: parsed.emotionalAnalysis?.manipulationRisk || 'low',
+                    emotionalIntensity: parsed.emotionalAnalysis?.emotionalIntensity || 0,
+                    patterns: parsed.emotionalAnalysis?.patterns || [],
+                    reasoning: parsed.emotionalAnalysis?.reasoning || 'No emotional manipulation detected',
+                    ...parsed.emotionalAnalysis
+                },
+                factCheckingData: {
+                    numericalClaims: parsed.factCheckingData?.numericalClaims || [],
+                    factualClaims: parsed.factCheckingData?.factualClaims || [],
+                    sources: parsed.factCheckingData?.sources || [],
+                    credibilityScore: parsed.factCheckingData?.credibilityScore || 50,
+                    ...parsed.factCheckingData
+                },
+                insights: {
+                    overallAssessment: parsed.insights?.overallAssessment || 'Analysis completed',
+                    redFlags: parsed.insights?.redFlags || [],
+                    strengths: parsed.insights?.strengths || [],
+                    ...parsed.insights
+                }
+            };
+        } catch (error) {
+            console.error('Failed to parse AI response:', error);
+            throw new Error('Invalid AI response format');
+        }
     }
 
     // Clear cache

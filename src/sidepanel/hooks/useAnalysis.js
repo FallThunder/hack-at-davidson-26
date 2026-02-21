@@ -17,6 +17,7 @@ const initialState = {
   trustScore: null,         // { score, tier } — computed from flags
   hasDimensions: false,     // stays false for live API (no dimension cards shown)
   unsupportedDomain: null,  // hostname when page is real but not in the news allowlist
+  notAnArticle: false,      // true when domain is known but page looks like a homepage/category
   error: null
 }
 
@@ -32,7 +33,12 @@ function reducer(state, action) {
       return { ...state, status: 'analyzing', hasDimensions: false }
 
     case 'UNSUPPORTED':
-      return { ...state, status: 'unsupported', unsupportedDomain: action.payload?.domain ?? null }
+      return {
+        ...state,
+        status: 'unsupported',
+        unsupportedDomain: action.payload?.domain ?? null,
+        notAnArticle: action.payload?.notAnArticle ?? false
+      }
 
     case 'SITE_PROFILE_RECEIVED':
       return { ...state, siteProfile: action.payload }
@@ -51,6 +57,9 @@ function reducer(state, action) {
 
     case 'RESET':
       return { ...initialState }
+
+    case 'FORCE_ANALYZE':
+      return { ...state, notAnArticle: false, status: 'analyzing' }
 
     case 'ERROR':
       return { ...state, status: 'idle', error: action.payload }
@@ -85,7 +94,7 @@ export function useAnalysis() {
   // to discard results from a previous run that arrived late (stale fetch race condition).
   const runIdRef = useRef(0)
 
-  const startAnalysis = useCallback(async (useCache = false) => {
+  const startAnalysis = useCallback(async (useCache = false, force = false) => {
     // Cancel any in-flight poll interval from a previous run
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current)
@@ -122,6 +131,12 @@ export function useAnalysis() {
       return
     }
 
+    // Gate on article detection — skip on forced analyze or cached results
+    if (!force && !article.isLikelyArticle) {
+      dispatch({ type: 'UNSUPPORTED', payload: { notAnArticle: true } })
+      return
+    }
+
     // Restore from cache on tab switch — no API calls needed
     if (useCache) {
       const cached = analysisCache.get(url)
@@ -153,7 +168,12 @@ export function useAnalysis() {
     // Poll /analyze until ready
     const poll = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/analyze?url=${encodeURIComponent(url)}`, { cache: 'no-store' })
+        const res = await fetch(`${BACKEND_URL}/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({ url, text: article.text, headline: article.headline })
+        })
         if (runIdRef.current !== runId) return  // stale — discard before even parsing
 
         const data = await res.json()
@@ -192,5 +212,5 @@ export function useAnalysis() {
     pollIntervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
   }, [])
 
-  return { ...state, startAnalysis }
+  return { ...state, startAnalysis, notAnArticle: state.notAnArticle }
 }

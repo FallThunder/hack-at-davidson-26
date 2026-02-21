@@ -73,7 +73,7 @@ No manual research required.
 
 ---
 
-# Demo
+# How to use
 
 ```text
 User opens article

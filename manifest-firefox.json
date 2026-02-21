@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Smart Page Analyzer",
   "version": "1.0.0",
-  "description": "Intelligently detects news articles and analyzes site popularity",
+  "description": "Intelligently detects news articles and analyzes site popularity for Firefox",
   
   "permissions": [
     "activeTab",

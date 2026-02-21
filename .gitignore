@@ -1,0 +1,32 @@
+# Build artifacts
+build/
+*.zip
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node modules (if added later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Extension store packages
+chrome-extension.zip
+firefox-extension.zip
+
+# Temporary files
+*.tmp
+*.temp

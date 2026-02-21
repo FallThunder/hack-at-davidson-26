@@ -1,6 +1,6 @@
 # Smart Page Analyzer
 
-An intelligent browser extension that automatically detects news articles and analyzes website popularity across all major browsers.
+An intelligent browser extension that automatically detects news articles and analyzes website popularity for Chrome/Chromium browsers and Firefox.
 
 ## 🚀 Features
 
@@ -10,7 +10,7 @@ An intelligent browser extension that automatically detects news articles and an
 - **🔍 Content Intelligence** - Analyzes article structure, metadata, and content patterns
 - **🎯 Smart Notifications** - Alerts for high-confidence news on lesser-known sites
 - **📱 Beautiful Interface** - Modern, responsive popup with detailed analysis results
-- **🌐 Cross-browser compatibility** - Works on Chrome, Firefox, Edge, and Safari
+- **🌐 Wide Browser Support** - Works on all Chromium browsers (Chrome, Edge, Brave, Opera, Arc, Vivaldi) and Firefox
 - **⚡ Performance Optimized** - Efficient analysis with intelligent caching
 
 ## 📁 Project Structure
@@ -39,9 +39,14 @@ An intelligent browser extension that automatically detects news articles and an
 
 ## 🛠️ Installation & Development
 
-### Chrome/Edge Installation
+### Chrome/Chromium Browsers (Chrome, Edge, Brave, Opera, Arc, Vivaldi, etc.)
 
-1. Open Chrome/Edge and navigate to `chrome://extensions/` or `edge://extensions/`
+1. Open your browser and navigate to the extensions page:
+   - **Chrome**: `chrome://extensions/`
+   - **Edge**: `edge://extensions/`
+   - **Brave**: `brave://extensions/`
+   - **Opera**: `opera://extensions/`
+   - **Arc/Vivaldi**: Similar extensions page
 2. Enable "Developer mode" in the top right
 3. Click "Load unpacked" and select this directory
 4. The extension will appear in your toolbar
@@ -51,14 +56,14 @@ An intelligent browser extension that automatically detects news articles and an
 1. Open Firefox and navigate to `about:debugging`
 2. Click "This Firefox"
 3. Click "Load Temporary Add-on"
-4. Select the `manifest.json` file from this directory
+4. Select the `manifest-firefox.json` file from this directory
 
-### Safari Installation
+### Quick Setup
 
-1. Open Safari and go to Safari > Preferences > Advanced
-2. Check "Show Develop menu in menu bar"
-3. Go to Develop > Allow Unsigned Extensions
-4. Convert to Safari extension format (requires Xcode)
+Run the development setup command for detailed instructions:
+```bash
+./build.sh dev
+```
 
 ## 🎨 Customization
 
@@ -149,30 +154,44 @@ The extension requests minimal permissions for maximum privacy:
 
 ## 🚀 Publishing
 
-### Chrome Web Store
+### Chrome Web Store (for all Chromium browsers)
 1. Create a developer account at [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole/)
-2. Package your extension as a ZIP file
-3. Upload and fill out the store listing
+2. Build the Chrome package: `./build.sh chrome`
+3. Upload `build/chrome-extension.zip` and fill out the store listing
 4. Submit for review
+5. **Note**: Extensions published to Chrome Web Store automatically work on Edge, Brave, Opera, and other Chromium browsers
 
 ### Firefox Add-ons
 1. Create an account at [Firefox Add-on Developer Hub](https://addons.mozilla.org/developers/)
-2. Package as a ZIP file
-3. Upload and complete the listing
+2. Build the Firefox package: `./build.sh firefox`
+3. Upload `build/firefox-extension.zip` and complete the listing
 4. Submit for review
 
-### Edge Add-ons
-1. Register at [Microsoft Edge Add-ons Developer Portal](https://partner.microsoft.com/dashboard/microsoftedge/)
-2. Follow similar process to Chrome Web Store
-3. Submit for review
+### Build Commands
+```bash
+# Build for Chrome/Chromium browsers
+./build.sh chrome
+
+# Build for Firefox
+./build.sh firefox
+
+# Build both versions
+./build.sh all
+```
 
 ## 🛠️ Development Tips
 
 1. **Testing**: Use the browser's extension developer tools for debugging
-2. **Reload**: Remember to reload the extension after making changes
+2. **Reload**: Remember to reload the extension after making changes in development
 3. **Console**: Check both the popup console and background script console
-4. **Permissions**: Add new permissions to `manifest.json` as needed
-5. **Storage**: Use `chrome.storage.local` for persistent data
+4. **Permissions**: Add new permissions to manifests as needed
+5. **Storage**: Use `chrome.storage.local` (works in Firefox too) for persistent data
+6. **Cross-browser**: Test on both Chrome and Firefox during development
+7. **Build**: Use `./build.sh all` before publishing to ensure both versions work
+
+### Supported Browsers
+- **Chromium-based**: Chrome, Edge, Brave, Opera, Arc, Vivaldi, and other Chromium browsers
+- **Firefox**: Standard Firefox and Firefox Developer Edition
 
 ## 📝 License
 

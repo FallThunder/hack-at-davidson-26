@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Smart Page Analyzer",
   "version": "1.0.0",
-  "description": "Intelligently detects news articles and analyzes site popularity",
+  "description": "Intelligently detects news articles and analyzes site popularity for Chromium browsers",
   
   "permissions": [
     "activeTab",

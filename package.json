@@ -1,18 +1,24 @@
 {
-  "name": "cross-browser-extension-starter",
+  "name": "smart-page-analyzer",
   "version": "1.0.0",
-  "description": "A starter template for cross-browser extensions",
+  "description": "Intelligent news detection and site popularity analysis for Chrome/Chromium and Firefox",
   "scripts": {
-    "build": "echo 'Build process - customize as needed'",
+    "build": "./build.sh all",
+    "build:chrome": "./build.sh chrome",
+    "build:firefox": "./build.sh firefox",
+    "dev": "./build.sh dev",
+    "clean": "./build.sh clean",
     "test": "echo 'Test suite - add your tests here'",
-    "lint": "echo 'Linting - add ESLint or similar'",
-    "package": "zip -r extension.zip . -x '*.git*' 'node_modules/*' 'package*.json' '*.md'"
+    "lint": "echo 'Linting - add ESLint or similar'"
   },
   "keywords": [
     "browser-extension",
     "chrome-extension",
     "firefox-addon",
-    "cross-browser",
+    "chromium",
+    "news-detection",
+    "content-analysis",
+    "site-popularity",
     "manifest-v3"
   ],
   "author": "Your Name",
@@ -25,10 +31,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/cross-browser-extension-starter"
+    "url": "https://github.com/yourusername/smart-page-analyzer"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/cross-browser-extension-starter/issues"
+    "url": "https://github.com/yourusername/smart-page-analyzer/issues"
   },
-  "homepage": "https://github.com/yourusername/cross-browser-extension-starter#readme"
+  "homepage": "https://github.com/yourusername/smart-page-analyzer#readme"
 }

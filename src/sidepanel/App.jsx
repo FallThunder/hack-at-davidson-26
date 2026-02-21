@@ -45,7 +45,7 @@ export function App() {
   // Original-array index of the flag that was clicked in the article
   const [activeFlag, setActiveFlag] = useState(null)
 
-  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, error } = useAnalysis()
+  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, analysisProgress, error } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags)
 
   const [statusMsgIdx, setStatusMsgIdx] = useState(0)
@@ -231,8 +231,8 @@ export function App() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span key={statusMsgIdx} className="text-sm text-gray-500 dark:text-gray-400 animate-fade-in-up">
-                {STATUS_MESSAGES[statusMsgIdx]}
+              <span key={analysisProgress ?? statusMsgIdx} className="text-sm text-gray-500 dark:text-gray-400 animate-fade-in-up">
+                {analysisProgress ?? STATUS_MESSAGES[statusMsgIdx]}
               </span>
             </div>
           )}

@@ -20,6 +20,7 @@ const initialState = {
   notAnArticle: false,      // true when domain is known but page looks like a homepage/category
   slowWarning: false,       // true after 2 minutes without a response
   overloadedWarning: false, // true when backend reports Claude is overloaded
+  analysisProgress: null,   // live progress string from backend stream ('Searching the web...', etc.)
   error: null
 }
 
@@ -65,6 +66,9 @@ function reducer(state, action) {
 
     case 'OVERLOADED_WARNING':
       return { ...state, overloadedWarning: true }
+
+    case 'PROGRESS_UPDATE':
+      return { ...state, analysisProgress: action.payload }
 
     case 'FORCE_ANALYZE':
       return { ...state, notAnArticle: false, status: 'analyzing' }
@@ -210,6 +214,10 @@ export function useAnalysis() {
           // Claude is overloaded — backend will retry on next poll automatically
           dispatch({ type: 'OVERLOADED_WARNING' })
           return
+        }
+
+        if (!data.ready && data.progress) {
+          dispatch({ type: 'PROGRESS_UPDATE', payload: data.progress })
         }
 
         if (data.ready && !data.data) {

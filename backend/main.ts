@@ -60,10 +60,12 @@ db.run(`CREATE TABLE IF NOT EXISTS analysis_cache (
     url TEXT PRIMARY KEY,
     waiting INTEGER NOT NULL DEFAULT 1,
     content TEXT,
-    error TEXT
+    error TEXT,
+    progress TEXT
 )`);
-// Safe migration for existing databases that predate the error column
+// Safe migrations for existing databases that predate these columns
 try { db.run('ALTER TABLE analysis_cache ADD COLUMN error TEXT'); } catch {}
+try { db.run('ALTER TABLE analysis_cache ADD COLUMN progress TEXT'); } catch {}
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -95,7 +97,7 @@ async function publisher(url: string): Promise<Response> {
 
         let finalMsg;
         try {
-            const msg = await anthropic.messages.stream({
+            const msg = anthropic.messages.stream({
                 model: "claude-haiku-4-5",
                 tools: [{
                     type: "web_search_20250305",
@@ -121,7 +123,17 @@ async function publisher(url: string): Promise<Response> {
                 },
                 max_tokens: 500
             });
+            console.log(`[publisher] started → ${url}`);
+            let publisherTextStarted = false;
+            msg.on('text', (textDelta: string) => {
+                if (!publisherTextStarted) {
+                    publisherTextStarted = true;
+                    console.log(`[publisher] generating response`);
+                }
+                process.stdout.write(textDelta);
+            });
             finalMsg = await msg.finalMessage();
+            process.stdout.write('\n');
         } catch (e: unknown) {
             console.error(e);
             return Response.json({ ready: true, data: null }, noCache);
@@ -140,13 +152,13 @@ async function publisher(url: string): Promise<Response> {
 
 async function analyze(url: string, text: string): Promise<Response> {
     try {
-        const cached = db.query<{ waiting: number; content: string | null; error: string | null }, [string]>(
-            'SELECT waiting, content, error FROM analysis_cache WHERE url = ?'
+        const cached = db.query<{ waiting: number; content: string | null; error: string | null; progress: string | null }, [string]>(
+            'SELECT waiting, content, error, progress FROM analysis_cache WHERE url = ?'
         ).get(url);
 
         if (cached) {
             if (cached.waiting) {
-                return Response.json({ ready: false, data: null }, noCache);
+                return Response.json({ ready: false, data: null, progress: cached.progress }, noCache);
             }
             if (cached.error === 'overloaded') {
                 // Delete row so the next poll triggers a fresh attempt
@@ -239,6 +251,20 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
                 format: zodOutputFormat(output_schema)
             },
             max_tokens: 4000
+        });
+
+        // Stream listeners for progress reporting and server-side logging.
+        // Initial progress is "Searching the web..." — Claude always searches before generating text.
+        // The first 'text' event signals Claude is now writing its analysis.
+        db.run('UPDATE analysis_cache SET progress = ? WHERE url = ?', ['Searching the web...', url]);
+        let analyzeTextStarted = false;
+        msg.on('text', (textDelta: string) => {
+            if (!analyzeTextStarted) {
+                analyzeTextStarted = true;
+                console.log(`[analyze] generating response for ${url}`);
+                db.run('UPDATE analysis_cache SET progress = ? WHERE url = ?', ['Analyzing article...', url]);
+            }
+            process.stdout.write(textDelta);
         });
 
         // finalMessage() is not awaited — returns immediately so we can respond with ready:false

@@ -63,19 +63,21 @@ async function publisher(url: string): Response {
 	    return Response.json({
 		ready: false,
 		data: null
-	    });
+	    }, noCache);
 	} else {
 	    return Response.json({
 		ready: true,
 		data: existing
-	    });
+	    }, yesCache);
 	}
     }
     const msg = await anthropic.messages.stream({
-	model: "claude-opus-4-6",
-	tools: [
-	    { type: "web_search_20260209", name: "web_search" }
-	],
+	model: "claude-haiku-4-5",
+	tools: [{
+      type: "web_search_20250305",
+      name: "web_search",
+      max_uses: 5
+    }],
 	system: `You are a rigorous, politically neutral fact-checking engine. Given the user's provided article, extract the following information from their https://mediabiasfactcheck.com article. Do NOT use any other domain or source. If unavailable, set the ratings to null.
 
 	    Extract:
@@ -91,7 +93,6 @@ async function publisher(url: string): Response {
 	    { "role": "user", "content": url }
 	],
 	output_config: {
-	    effort: 'low',
 	    format: zodOutputFormat(site_profile)
 	},
 	max_tokens: 500
@@ -104,9 +105,20 @@ async function publisher(url: string): Response {
     return Response.json({
 	ready: true,
 	data: output
-    });
+    }, yesCache);
 
 }
+
+const noCache = {
+	headers: {
+		"Cache-Control": "no-store"
+	}
+};
+const yesCache = {
+	headers: {
+		"Cache-Control": "max-age=604800"
+	}
+};
 
 async function analyze(url: string): Response {
     console.log(database);
@@ -118,21 +130,22 @@ async function analyze(url: string): Response {
 	    return  Response.json({
 		ready: false,
 		data: null
-	    });
+	    }, noCache);
 	} else {
 	    return  Response.json({
 		ready: true,
 		data: existing
-	    });
+	    }, yesCache);
 	}
     }
     if (Object.keys(database).length !== 0) return;
     const msg = anthropic.messages.stream({
-	model: "claude-opus-4-6",
-	tools: [
-	    { type: "web_search_20260209", name: "web_search" },
-	    { type: "web_fetch_20260209", name: "web_fetch" },
-	],
+	model: "claude-haiku-4-5",
+	tools: [{
+	      type: "web_search_20250305",
+	      name: "web_search",
+	      max_uses: 5
+    	}],
 	system: `
 You are a rigorous, politically neutral fact-checking engine. You will be given the full text of a news article or opinion piece. Your job is to analyze it and return a structured JSON object.
 
@@ -191,7 +204,6 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 	    }
 	],
 	output_config: {
-	    effort: "medium",
 	    format: zodOutputFormat(output_schema)
 	},
 	max_tokens: 2000
@@ -208,7 +220,7 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 
 	ready: false,
 	data: null
-    });
+    }, noCache);
 }
 
 const server = Bun.serve({

@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIError } from "@anthropic-ai/sdk";
 import { z } from 'zod';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { Database } from 'bun:sqlite';
@@ -59,8 +59,11 @@ db.run(`CREATE TABLE IF NOT EXISTS publisher_cache (
 db.run(`CREATE TABLE IF NOT EXISTS analysis_cache (
     url TEXT PRIMARY KEY,
     waiting INTEGER NOT NULL DEFAULT 1,
-    content TEXT
+    content TEXT,
+    error TEXT
 )`);
+// Safe migration for existing databases that predate the error column
+try { db.run('ALTER TABLE analysis_cache ADD COLUMN error TEXT'); } catch {}
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -137,13 +140,21 @@ async function publisher(url: string): Promise<Response> {
 
 async function analyze(url: string, text: string): Promise<Response> {
     try {
-        const cached = db.query<{ waiting: number; content: string | null }, [string]>(
-            'SELECT waiting, content FROM analysis_cache WHERE url = ?'
+        const cached = db.query<{ waiting: number; content: string | null; error: string | null }, [string]>(
+            'SELECT waiting, content, error FROM analysis_cache WHERE url = ?'
         ).get(url);
 
         if (cached) {
             if (cached.waiting) {
                 return Response.json({ ready: false, data: null }, noCache);
+            }
+            if (cached.error === 'overloaded') {
+                // Delete row so the next poll triggers a fresh attempt
+                db.run('DELETE FROM analysis_cache WHERE url = ?', [url]);
+                return Response.json({ ready: false, data: null, error: 'overloaded' }, noCache);
+            }
+            if (cached.error === 'failed') {
+                return Response.json({ ready: true, data: null, error: 'failed' }, noCache);
             }
             return Response.json({ ready: true, data: cached.content ? JSON.parse(cached.content) : null }, yesCache);
         }
@@ -241,15 +252,17 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
             console.log('completed analysis for ' + url);
         }).catch((e: unknown) => {
             console.error(e);
-            // Delete the row so the next poll can retry rather than deadlocking on waiting=1
-            db.run('DELETE FROM analysis_cache WHERE url = ?', [url]);
+            const isOverloaded = e instanceof APIError && e.status === 529;
+            db.run('UPDATE analysis_cache SET waiting = 0, error = ? WHERE url = ?',
+                [isOverloaded ? 'overloaded' : 'failed', url]);
         });
 
         return Response.json({ ready: false, data: null }, noCache);
     } catch (e: unknown) {
         console.error('fail!', e);
-        // If something went wrong after we inserted the row, clean it up
-        db.run('DELETE FROM analysis_cache WHERE url = ?', [url]);
+        const isOverloaded = e instanceof APIError && e.status === 529;
+        db.run('UPDATE analysis_cache SET waiting = 0, error = ? WHERE url = ?',
+            [isOverloaded ? 'overloaded' : 'failed', url]);
         return Response.json({}, { status: 400, headers: CORS_HEADERS });
     }
 }

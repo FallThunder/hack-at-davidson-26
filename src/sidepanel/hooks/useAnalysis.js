@@ -19,6 +19,7 @@ const initialState = {
   unsupportedDomain: null,  // hostname when page is real but not in the news allowlist
   notAnArticle: false,      // true when domain is known but page looks like a homepage/category
   slowWarning: false,       // true after 2 minutes without a response
+  overloadedWarning: false, // true when backend reports Claude is overloaded
   error: null
 }
 
@@ -61,6 +62,9 @@ function reducer(state, action) {
 
     case 'SLOW_WARNING':
       return { ...state, slowWarning: true }
+
+    case 'OVERLOADED_WARNING':
+      return { ...state, overloadedWarning: true }
 
     case 'FORCE_ANALYZE':
       return { ...state, notAnArticle: false, status: 'analyzing' }
@@ -201,6 +205,12 @@ export function useAnalysis() {
 
         const data = await res.json()
         if (runIdRef.current !== runId) return  // stale — discard after parsing
+
+        if (data.error === 'overloaded') {
+          // Claude is overloaded — backend will retry on next poll automatically
+          dispatch({ type: 'OVERLOADED_WARNING' })
+          return
+        }
 
         if (data.ready && !data.data) {
           clearInterval(pollIntervalRef.current)

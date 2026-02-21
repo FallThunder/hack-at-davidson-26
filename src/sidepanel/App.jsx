@@ -45,7 +45,7 @@ export function App() {
   // Original-array index of the flag that was clicked in the article
   const [activeFlag, setActiveFlag] = useState(null)
 
-  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, error } = useAnalysis()
+  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, error } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags)
 
   const [statusMsgIdx, setStatusMsgIdx] = useState(0)
@@ -237,8 +237,15 @@ export function App() {
             </div>
           )}
 
+          {/* Overloaded warning — shown when Claude API returns overloaded_error; polling continues automatically */}
+          {overloadedWarning && isAnalyzing && (
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+              Claude is currently overloaded. Retrying automatically...
+            </div>
+          )}
+
           {/* Slow-response warning */}
-          {slowWarning && isAnalyzing && (
+          {slowWarning && !overloadedWarning && isAnalyzing && (
             <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
               Analysis is taking longer than usual. The server may be busy — please wait a moment or try refreshing the page.
             </div>

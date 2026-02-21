@@ -138,7 +138,7 @@ const yesCache = {
 	}
 };
 
-async function analyze(url: string): Response {
+async function analyze(url: string, text: string): Response {
     if (Object.keys(database).includes(url)) {
 	    const entry = database[url];
 	    if (entry.analysis) {
@@ -213,7 +213,7 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 	messages: [
 	    {
 		"role": "user",
-		"content": `${url}`
+		"content": `URL: ${url}\nFull article text below.\n---\n${text}`
 	    }
 	],
 	output_config: {
@@ -267,7 +267,7 @@ const server = Bun.serve({
 	        return new Response("no url provided");
 	    }
 	    const analyzeUrlV = new URL(analyzeUrl);
-	    return await analyze(analyzeUrl);
+	    return await analyze(analyzeUrl, (await req.text()));
 	}
     }
 });

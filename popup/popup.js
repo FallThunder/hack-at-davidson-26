@@ -186,6 +186,123 @@ document.addEventListener('DOMContentLoaded', function() {
         if (analysis.factCheckingData?.credibilityScore) {
             claimsCount.title = `Credibility Score: ${analysis.factCheckingData.credibilityScore}/100`;
         }
+
+        // Add detailed analysis sections
+        addDetailedAnalysis(analysis);
+    }
+
+    // Add detailed analysis sections with expandable content
+    function addDetailedAnalysis(analysis) {
+        const biasCard = document.getElementById('biasCard');
+        
+        // Remove existing detailed sections
+        const existingDetails = biasCard.querySelectorAll('.expandable-section');
+        existingDetails.forEach(section => section.remove());
+
+        // Add factual claims section
+        if (analysis.factCheckingData?.factualClaims?.length > 0 || analysis.claims?.length > 0) {
+            const claims = analysis.factCheckingData?.factualClaims || analysis.claims || [];
+            addExpandableSection(biasCard, 'Factual Claims to Verify', claims, 'claims');
+        }
+
+        // Add numerical claims section
+        if (analysis.factCheckingData?.numericalClaims?.length > 0) {
+            addExpandableSection(biasCard, 'Numerical Claims', analysis.factCheckingData.numericalClaims, 'claims');
+        }
+
+        // Add emotional patterns section
+        if (analysis.emotionalAnalysis?.patterns?.length > 0) {
+            addExpandableSection(biasCard, 'Emotional Manipulation Patterns', analysis.emotionalAnalysis.patterns, 'red-flags');
+        }
+
+        // Add bias reasoning
+        if (analysis.biasAnalysis?.reasoning) {
+            addReasoningSection(biasCard, 'Political Bias Analysis', analysis.biasAnalysis.reasoning);
+        }
+
+        // Add emotional reasoning
+        if (analysis.emotionalAnalysis?.reasoning) {
+            addReasoningSection(biasCard, 'Emotional Analysis', analysis.emotionalAnalysis.reasoning);
+        }
+    }
+
+    // Add expandable section with list of items
+    function addExpandableSection(parentElement, title, items, listClass = '') {
+        if (!items || items.length === 0) return;
+
+        const section = document.createElement('div');
+        section.className = 'expandable-section';
+        
+        const toggle = document.createElement('button');
+        toggle.className = 'expand-toggle collapsed';
+        toggle.textContent = `${title} (${items.length})`;
+        
+        const content = document.createElement('div');
+        content.className = 'expandable-content collapsed';
+        
+        const list = document.createElement('ul');
+        list.className = `detail-list ${listClass}`;
+        
+        items.slice(0, 10).forEach(item => { // Limit to 10 items
+            const listItem = document.createElement('li');
+            listItem.textContent = typeof item === 'string' ? item : item.text || item.claim || JSON.stringify(item);
+            list.appendChild(listItem);
+        });
+        
+        content.appendChild(list);
+        section.appendChild(toggle);
+        section.appendChild(content);
+        parentElement.appendChild(section);
+        
+        // Add click handler for toggle
+        toggle.addEventListener('click', () => {
+            const isCollapsed = content.classList.contains('collapsed');
+            if (isCollapsed) {
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                toggle.classList.remove('collapsed');
+            } else {
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+            }
+        });
+    }
+
+    // Add reasoning section
+    function addReasoningSection(parentElement, title, reasoning) {
+        const section = document.createElement('div');
+        section.className = 'expandable-section';
+        
+        const toggle = document.createElement('button');
+        toggle.className = 'expand-toggle collapsed';
+        toggle.textContent = title;
+        
+        const content = document.createElement('div');
+        content.className = 'expandable-content collapsed';
+        
+        const reasoningDiv = document.createElement('div');
+        reasoningDiv.className = 'reasoning-text';
+        reasoningDiv.textContent = reasoning;
+        
+        content.appendChild(reasoningDiv);
+        section.appendChild(toggle);
+        section.appendChild(content);
+        parentElement.appendChild(section);
+        
+        // Add click handler for toggle
+        toggle.addEventListener('click', () => {
+            const isCollapsed = content.classList.contains('collapsed');
+            if (isCollapsed) {
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                toggle.classList.remove('collapsed');
+            } else {
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+            }
+        });
     }
 
     // Display article details
@@ -232,16 +349,88 @@ document.addEventListener('DOMContentLoaded', function() {
                 detailsHtml += `<div class="detail-row"><span class="detail-label">AI Assessment:</span><span class="detail-value">${escapeHtml(insights.overallAssessment)}</span></div>`;
             }
             
-            if (insights.redFlags && insights.redFlags.length > 0) {
-                detailsHtml += `<div class="detail-row"><span class="detail-label">Red Flags:</span><span class="detail-value">${insights.redFlags.length} found</span></div>`;
-            }
-            
-            if (insights.strengths && insights.strengths.length > 0) {
-                detailsHtml += `<div class="detail-row"><span class="detail-label">Strengths:</span><span class="detail-value">${insights.strengths.length} found</span></div>`;
-            }
         }
         
         articleDetails.innerHTML = detailsHtml;
+        
+        // Add detailed AI insights sections
+        addDetailedInsights(analysis);
+    }
+
+    // Add detailed AI insights sections
+    function addDetailedInsights(analysis) {
+        const detailsCard = document.getElementById('detailsCard');
+        
+        // Remove existing detailed sections
+        const existingDetails = detailsCard.querySelectorAll('.expandable-section');
+        existingDetails.forEach(section => section.remove());
+
+        const insights = analysis.aiInsights || analysis.insights || {};
+
+        // Add overall assessment
+        if (insights.overallAssessment) {
+            addInsightSection(detailsCard, 'AI Assessment', insights.overallAssessment);
+        }
+
+        // Add red flags section
+        if (insights.redFlags && insights.redFlags.length > 0) {
+            addExpandableSection(detailsCard, 'Red Flags', insights.redFlags, 'red-flags');
+        }
+
+        // Add strengths section
+        if (insights.strengths && insights.strengths.length > 0) {
+            addExpandableSection(detailsCard, 'Article Strengths', insights.strengths, 'strengths');
+        }
+
+        // Add sources section if available
+        if (analysis.sources && analysis.sources.length > 0) {
+            const sourceTexts = analysis.sources.map(source => 
+                source.text || source.url || source.domain || source
+            );
+            addExpandableSection(detailsCard, 'Sources & References', sourceTexts, 'sources');
+        }
+
+        // Add main content summary if available
+        if (analysis.content && analysis.content.mainText && analysis.content.mainText.length > 100) {
+            const summary = analysis.content.mainText.substring(0, 300) + '...';
+            addInsightSection(detailsCard, 'Content Preview', summary);
+        }
+    }
+
+    // Add insight section (non-expandable text)
+    function addInsightSection(parentElement, title, text) {
+        const section = document.createElement('div');
+        section.className = 'expandable-section';
+        
+        const toggle = document.createElement('button');
+        toggle.className = 'expand-toggle collapsed';
+        toggle.textContent = title;
+        
+        const content = document.createElement('div');
+        content.className = 'expandable-content collapsed';
+        
+        const insightDiv = document.createElement('div');
+        insightDiv.className = 'insight-text';
+        insightDiv.textContent = text;
+        
+        content.appendChild(insightDiv);
+        section.appendChild(toggle);
+        section.appendChild(content);
+        parentElement.appendChild(section);
+        
+        // Add click handler for toggle
+        toggle.addEventListener('click', () => {
+            const isCollapsed = content.classList.contains('collapsed');
+            if (isCollapsed) {
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                toggle.classList.remove('collapsed');
+            } else {
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+            }
+        });
     }
 
     // Format bias text for display

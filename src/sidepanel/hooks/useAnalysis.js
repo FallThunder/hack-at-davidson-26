@@ -1,6 +1,8 @@
-import { useReducer, useCallback } from 'react'
+import { useReducer, useCallback, useRef } from 'react'
 import { computeTrustScore } from '../../utils/scoring.js'
 import { MOCK_SITE_PROFILE, MOCK_FLAGS, MOCK_DIMENSIONS } from '../mockData.js'
+
+const HAS_DIMENSIONS = MOCK_DIMENSIONS.length > 0
 
 const DIMENSION_ORDER = [
   'factCheck',
@@ -56,6 +58,9 @@ function reducer(state, action) {
     case 'ANALYSIS_COMPLETE':
       return { ...state, status: 'complete' }
 
+    case 'RESET':
+      return { ...initialState }
+
     case 'ERROR':
       return { ...state, status: 'idle', error: action.payload }
 
@@ -83,8 +88,14 @@ function sendToContent(message) {
 
 export function useAnalysis() {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const pendingTimeouts = useRef([])
 
   const startAnalysis = useCallback(async () => {
+    // Cancel any in-flight mock-streaming timeouts from a previous run
+    pendingTimeouts.current.forEach(id => clearTimeout(id))
+    pendingTimeouts.current = []
+
+    dispatch({ type: 'RESET' })
     dispatch({ type: 'START_EXTRACT' })
 
     // Try to get article data from the content script
@@ -96,29 +107,34 @@ export function useAnalysis() {
 
     dispatch({ type: 'START_ANALYZE' })
 
+    const schedule = (fn, delay) => {
+      const id = setTimeout(fn, delay)
+      pendingTimeouts.current.push(id)
+    }
+
     // Simulate streaming: site profile arrives first
-    setTimeout(() => {
+    schedule(() => {
       dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: MOCK_SITE_PROFILE })
     }, 400)
 
     // Dimensions stream in one by one
     MOCK_DIMENSIONS.forEach((dimension, index) => {
-      setTimeout(() => {
+      schedule(() => {
         dispatch({ type: 'DIMENSION_RECEIVED', payload: dimension })
       }, 800 + index * 700)
     })
 
     // Flags arrive after the last dimension
     const totalDelay = 800 + (MOCK_DIMENSIONS.length - 1) * 700 + 300
-    setTimeout(() => {
+    schedule(() => {
       dispatch({ type: 'FLAGS_RECEIVED', payload: MOCK_FLAGS })
     }, totalDelay)
 
     // Mark complete
-    setTimeout(() => {
+    schedule(() => {
       dispatch({ type: 'ANALYSIS_COMPLETE' })
     }, totalDelay + 100)
   }, [])
 
-  return { ...state, startAnalysis }
+  return { ...state, startAnalysis, hasDimensions: HAS_DIMENSIONS }
 }

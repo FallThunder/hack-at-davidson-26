@@ -1,49 +1,58 @@
 /* Evident highlight styles — injected into every page */
 
-.prism-highlight {
+.evident-highlight {
   position: relative;
   border-radius: 2px;
   cursor: pointer;
   transition: filter 0.15s ease;
 }
 
-.prism-highlight:hover {
+.evident-highlight:hover {
   filter: brightness(0.92);
 }
 
 /* Urgency 1–2: yellow */
-.prism-highlight[data-prism-highlight="urgency-1"],
-.prism-highlight[data-prism-highlight="urgency-2"] {
-  background-color: rgba(255, 215, 0, 0.35);
-  color: #4a3800;
-  border-bottom: 2px solid #ffd700;
+.evident-highlight[data-evident-highlight="urgency-1"],
+.evident-highlight[data-evident-highlight="urgency-2"] {
+  background-color: rgba(255, 215, 0, 0.35) !important;
+  color: #4a3800 !important;
+  border-bottom: 2px solid #ffd700 !important;
 }
 
 /* Urgency 3: orange */
-.prism-highlight[data-prism-highlight="urgency-3"] {
-  background-color: rgba(255, 140, 0, 0.35);
-  color: #4a2000;
-  border-bottom: 2px solid #ff8c00;
+.evident-highlight[data-evident-highlight="urgency-3"] {
+  background-color: rgba(255, 140, 0, 0.35) !important;
+  color: #4a2000 !important;
+  border-bottom: 2px solid #ff8c00 !important;
 }
 
 /* Urgency 4–5: red */
-.prism-highlight[data-prism-highlight="urgency-4"],
-.prism-highlight[data-prism-highlight="urgency-5"] {
-  background-color: rgba(255, 68, 68, 0.35);
-  color: #8b0000;
-  border-bottom: 2px solid #ff4444;
+.evident-highlight[data-evident-highlight="urgency-4"],
+.evident-highlight[data-evident-highlight="urgency-5"] {
+  background-color: rgba(255, 68, 68, 0.35) !important;
+  color: #8b0000 !important;
+  border-bottom: 2px solid #ff4444 !important;
 }
 
-/* Hover tooltip */
-.prism-tooltip {
+/* Scroll-to pulse: briefly brighten the span when jumped to from the side panel */
+@keyframes evident-pulse {
+  0%   { filter: brightness(1); }
+  30%  { filter: brightness(0.7); }
+  60%  { filter: brightness(1.15); }
+  100% { filter: brightness(1); }
+}
+
+.evident-highlight-pulse {
+  animation: evident-pulse 1.2s ease;
+}
+
+/* Hover tooltip — shared element on body, positioned via JS */
+.evident-tooltip {
   visibility: hidden;
   opacity: 0;
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1a1a1a;
-  color: #fff;
+  position: fixed;
+  background: #ffffff;
+  color: #111827;
   font-size: 12px;
   line-height: 1.4;
   padding: 5px 10px;
@@ -53,70 +62,101 @@
   pointer-events: none;
   transition: opacity 0.15s ease;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.prism-tooltip::after {
+.evident-tooltip::after {
   content: '';
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
   border: 5px solid transparent;
+  border-top-color: #ffffff;
+}
+
+/* Tooltip — dark mode */
+[data-evident-dark] .evident-tooltip {
+  background: #1a1a1a;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+[data-evident-dark] .evident-tooltip::after {
   border-top-color: #1a1a1a;
 }
 
-.prism-highlight:hover .prism-tooltip {
-  visibility: visible;
-  opacity: 1;
-}
+/* Tooltip visibility is controlled via JS (mouseenter/mouseleave) */
 
-/* Click popover */
-#prism-popover {
+/* Click popover — light mode default */
+#evident-popover {
   position: absolute;
   z-index: 2147483647;
   display: none;
-  background: #1e1e2e;
-  color: #cdd6f4;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   padding: 14px 16px;
   max-width: 340px;
   width: max-content;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
   line-height: 1.55;
 }
 
-#prism-popover.visible {
+/* Click popover — dark mode */
+[data-evident-dark] #evident-popover {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+#evident-popover.visible {
   display: block;
 }
 
-#prism-popover .prism-pop-header {
+#evident-popover .evident-pop-header {
   font-weight: 700;
   font-size: 14px;
   margin-bottom: 8px;
+  color: #111827;
+}
+
+[data-evident-dark] #evident-popover .evident-pop-header {
   color: #cdd6f4;
 }
 
-#prism-popover .prism-pop-excerpt {
+#evident-popover .evident-pop-excerpt {
   font-style: italic;
-  color: #a6adc8;
-  border-left: 3px solid #6c7086;
+  color: #6b7280;
+  border-left: 3px solid #d1d5db;
   margin: 0 0 10px;
   padding-left: 10px;
 }
 
-#prism-popover .prism-pop-reasoning {
-  color: #bac2de;
+[data-evident-dark] #evident-popover .evident-pop-excerpt {
+  color: #a6adc8;
+  border-left-color: #6c7086;
+}
+
+#evident-popover .evident-pop-reasoning {
+  color: #374151;
   font-size: 12px;
   margin-bottom: 10px;
   line-height: 1.5;
 }
 
-#prism-popover .prism-pop-sources p {
-  color: #585b70;
+[data-evident-dark] #evident-popover .evident-pop-reasoning {
+  color: #bac2de;
+}
+
+#evident-popover .evident-pop-sources p {
+  color: #9ca3af;
   font-size: 11px;
   margin: 0 0 4px;
   font-weight: 600;
@@ -124,9 +164,13 @@
   letter-spacing: 0.05em;
 }
 
-#prism-popover .prism-pop-sources a {
+[data-evident-dark] #evident-popover .evident-pop-sources p {
+  color: #585b70;
+}
+
+#evident-popover .evident-pop-sources a {
   display: block;
-  color: #89b4fa;
+  color: #2563eb;
   font-size: 11px;
   text-decoration: none;
   white-space: nowrap;
@@ -135,7 +179,15 @@
   margin-bottom: 2px;
 }
 
-#prism-popover .prism-pop-sources a:hover {
+[data-evident-dark] #evident-popover .evident-pop-sources a {
+  color: #89b4fa;
+}
+
+#evident-popover .evident-pop-sources a:hover {
   text-decoration: underline;
+  color: #1d4ed8;
+}
+
+[data-evident-dark] #evident-popover .evident-pop-sources a:hover {
   color: #b4d0fa;
 }

@@ -52,7 +52,7 @@ export function SiteProfile({ domain, company, factual_reporting, political_bias
         </div>
         <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
           {/* Gradient track */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 via-gray-300 to-red-400 opacity-30" />
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 via-gray-300 to-red-400 opacity-70" />
           {/* Dot indicator */}
           <div
             className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white dark:bg-gray-100 border-2 border-gray-500 dark:border-gray-300 shadow-sm"
@@ -71,9 +71,12 @@ export function SiteProfile({ domain, company, factual_reporting, political_bias
           <span className="text-xs text-gray-400 dark:text-gray-500">High</span>
         </div>
         <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          {/* Full-width gradient so color position matches absolute score, not relative */}
+          <div className="absolute inset-0 bg-gradient-to-r from-red-400 via-yellow-300 to-green-400" />
+          {/* Cover the unfilled right portion with the track background */}
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-red-400 via-yellow-300 to-green-400"
-            style={{ width: `${factualScore}%`, transition: 'width 0.8s ease-out' }}
+            className="absolute inset-y-0 right-0 bg-gray-200 dark:bg-gray-700"
+            style={{ width: `${100 - factualScore}%`, transition: 'width 0.8s ease-out' }}
           />
         </div>
       </div>

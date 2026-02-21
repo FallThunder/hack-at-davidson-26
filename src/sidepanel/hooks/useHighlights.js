@@ -30,5 +30,16 @@ export function useHighlights(flags) {
     sendToContent({ type: 'TOGGLE_HIGHLIGHTS', visible: next })
   }, [highlightsVisible])
 
-  return { highlightsVisible, toggleHighlights, highlightsApplied }
+  const scrollToFlag = useCallback((flagIndex) => {
+    sendToContent({ type: 'SCROLL_TO_FLAG', flagIndex })
+  }, [])
+
+  // Called when the user navigates to a new article — clears old highlights from the page
+  const resetHighlights = useCallback(() => {
+    sendToContent({ type: 'CLEAR_HIGHLIGHTS' })
+    setHighlightsApplied(false)
+    setHighlightsVisible(true)
+  }, [])
+
+  return { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights }
 }

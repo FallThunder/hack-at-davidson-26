@@ -23,19 +23,49 @@ export function App() {
   const [darkMode, setDarkMode] = useState(
     () => window.matchMedia('(prefers-color-scheme: dark)').matches
   )
+  // Original-array index of the flag that was clicked in the article
+  const [activeFlag, setActiveFlag] = useState(null)
 
-  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis } = useAnalysis()
-  const { highlightsVisible, toggleHighlights, highlightsApplied } = useHighlights(flags)
+  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions } = useAnalysis()
+  const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags)
 
-  // Sync dark mode class to <html>
+  // Sync dark mode class to side panel <html>
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  // Sync dark mode to article page tooltips/popover
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.runtime) return
+    chrome.runtime.sendMessage({ type: 'SET_DARK_MODE', dark: darkMode, target: 'content' })
   }, [darkMode])
 
   // Auto-start analysis on mount
   useEffect(() => {
     startAnalysis()
   }, [])
+
+  // Listen for messages from the content script and service worker
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.runtime) return
+    const handler = (message) => {
+      if (message.type === 'HIGHLIGHT_CLICKED') {
+        setActiveFlag(message.flagIndex)
+      }
+      if (message.type === 'PAGE_NAVIGATED') {
+        setActiveFlag(null)
+        resetHighlights()
+        startAnalysis()
+      }
+    }
+    chrome.runtime.onMessage.addListener(handler)
+    return () => chrome.runtime.onMessage.removeListener(handler)
+  }, [resetHighlights, startAnalysis])
+
+  // Reset active flag when a new set of flags arrives
+  useEffect(() => {
+    setActiveFlag(null)
+  }, [flags])
 
   const isAnalyzing = status === 'extracting' || status === 'analyzing'
 
@@ -67,7 +97,7 @@ export function App() {
           {/* Trust Meter — only after all 6 dimensions complete */}
           {trustScore ? (
             <TrustMeter score={trustScore.score} tier={trustScore.tier} />
-          ) : isAnalyzing && (
+          ) : hasDimensions && isAnalyzing && (
             <div className="flex flex-col items-center py-5">
               <div className="w-36 h-36 rounded-full border-8 border-gray-200 dark:border-gray-700 animate-pulse" />
               <div className="mt-3 h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -78,7 +108,7 @@ export function App() {
           {siteProfile && <SiteProfile {...siteProfile} />}
 
           {/* 6 Dimension Cards */}
-          {(isAnalyzing || Object.keys(dimensions).length > 0) && (
+          {hasDimensions && (isAnalyzing || Object.keys(dimensions).length > 0) && (
             <div>
               <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-0.5">
                 Analysis
@@ -102,9 +132,15 @@ export function App() {
               </p>
               <div className="space-y-2.5">
                 {[...flags]
+                  .map((flag, originalIndex) => ({ ...flag, originalIndex }))
                   .sort((a, b) => b.urgency - a.urgency)
-                  .map((flag, i) => (
-                    <FlagCard key={i} {...flag} />
+                  .map((flag) => (
+                    <FlagCard
+                      key={flag.originalIndex}
+                      {...flag}
+                      isActive={activeFlag === flag.originalIndex}
+                      onScrollToArticle={highlightsApplied ? () => scrollToFlag(flag.originalIndex) : undefined}
+                    />
                   ))}
               </div>
             </div>

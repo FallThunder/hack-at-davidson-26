@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PRISM extension build script.
+ * Evident extension build script.
  * Produces:
  *   dist/manifest.json
  *   dist/icons/icon{16,48,128}.png
@@ -71,7 +71,7 @@ await build({
     lib: {
       entry: resolve(root, 'src/content/content.js'),
       formats: ['iife'],
-      name: 'PrismContent',
+      name: 'EvidentContent',
       fileName: () => 'content.js'
     },
     rollupOptions: {

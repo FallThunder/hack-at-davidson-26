@@ -1,12 +1,12 @@
 {
-  "name": "prism-extension",
+  "name": "evident-extension",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node build.js",
     "build": "node build.js",
-    "zip": "npm run build && zip -r prism.zip dist/"
+    "zip": "npm run build && zip -r evident.zip dist/"
   },
   "dependencies": {
     "react": "^18.3.1",

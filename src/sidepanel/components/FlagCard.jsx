@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const URGENCY_STYLES = {
   1: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/10 dark:border-yellow-800/50',
@@ -8,20 +8,46 @@ const URGENCY_STYLES = {
   5: 'bg-red-50 border-red-300 dark:bg-red-900/20 dark:border-red-700/60'
 }
 
-export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, sources = [] }) {
+const URGENCY_DOT_COLORS = {
+  1: 'bg-yellow-400',
+  2: 'bg-yellow-400',
+  3: 'bg-orange-500',
+  4: 'bg-red-500',
+  5: 'bg-red-600'
+}
+
+export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, sources = [], isActive = false, onScrollToArticle }) {
   const [expanded, setExpanded] = useState(false)
+  const cardRef = useRef(null)
 
   const clampedUrgency = Math.min(Math.max(urgency, 1), 5)
-  const fires = '🔥'.repeat(clampedUrgency)
   const confidencePct = Math.round((confidence ?? 0) * 100)
   const cardStyle = URGENCY_STYLES[clampedUrgency] ?? URGENCY_STYLES[3]
+  const dotColor = URGENCY_DOT_COLORS[clampedUrgency] ?? URGENCY_DOT_COLORS[3]
+
+  // When active (clicked from article), expand and scroll into view
+  useEffect(() => {
+    if (!isActive) return
+    setExpanded(true)
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [isActive])
 
   return (
-    <div className={`rounded-xl border p-4 ${cardStyle}`}>
-      {/* Header: fires, flag type, confidence */}
+    <div
+      ref={cardRef}
+      className={[
+        'rounded-xl border p-4 transition-shadow duration-200',
+        cardStyle,
+        isActive ? 'ring-2 ring-indigo-400 dark:ring-indigo-500 shadow-md' : ''
+      ].join(' ')}
+    >
+      {/* Header: urgency dot, flag type, confidence */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <span className="text-sm leading-none" aria-label={`Urgency ${urgency} of 5`}>{fires}</span>
+          <span
+            className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`}
+            aria-label={`Urgency ${clampedUrgency} of 5`}
+          />
           <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
             {flag}
           </span>
@@ -31,10 +57,20 @@ export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, source
         </span>
       </div>
 
-      {/* Excerpt blockquote */}
+      {/* Excerpt blockquote — click to scroll to the highlighted span in the article */}
       {excerpt && (
-        <blockquote className="border-l-2 border-gray-400 dark:border-gray-500 pl-3 mb-2.5">
-          <p className="text-xs italic text-gray-700 dark:text-gray-300 leading-relaxed">
+        <blockquote
+          className={[
+            'border-l-2 border-gray-400 dark:border-gray-500 pl-3 mb-2.5',
+            onScrollToArticle ? 'cursor-pointer group' : ''
+          ].join(' ')}
+          onClick={onScrollToArticle}
+          title={onScrollToArticle ? 'Jump to this passage in the article' : undefined}
+        >
+          <p className={[
+            'text-xs italic text-gray-700 dark:text-gray-300 leading-relaxed',
+            onScrollToArticle ? 'group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-150' : ''
+          ].join(' ')}>
             &ldquo;{excerpt}&rdquo;
           </p>
         </blockquote>

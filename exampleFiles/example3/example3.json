@@ -1,0 +1,85 @@
+{
+  "analyzed_at": "2026-02-21T00:00:00Z",
+  "url": "https://boingboing.net/2026/02/09/how-subraction-not-addition-may-have-been-the-secret-to-egypts-pyramids.html",
+  "site_profile": {
+    "domain": "boingboing.net",
+    "company": "Boing Boing Media, Inc.",
+    "factual_reporting": {
+      "rating": "Mixed",
+      "score": 45
+    },
+    "political_bias": {
+      "rating": "Left",
+      "score": 20
+    }
+  },
+  "content_analysis": {
+    "overall_tone": "Opinion",
+    "overall_factuality": "Mostly Factual",
+    "flags": [
+      {
+        "urgency": 3,
+        "flag": "Misleading Framing",
+        "confidence": 0.78,
+        "excerpt": "many theories rely on unfeasible ramps that'd never work. This theory works.",
+        "reasoning": "The article dismisses ramp-based theories wholesale and declares with confidence that this new theory 'works,' but the mainstream archaeological consensus is that ramp-based theories remain the most credible, if incomplete, explanations. Multiple Egyptologists and engineers maintain that some form of ramp was almost certainly used. The new subtraction/trapezoid theory has not been peer-reviewed or subjected to archaeological scrutiny in any documented form found in the literature, so declaring it definitively as a working theory overstates its standing significantly.",
+        "sources": [
+          {
+            "title": "Construction of the Egyptian pyramids – Wikipedia",
+            "url": "https://en.wikipedia.org/wiki/Construction_of_the_Egyptian_pyramids",
+            "publisher": "Wikipedia"
+          },
+          {
+            "title": "How to Build a Pyramid – Archaeology Magazine",
+            "url": "https://archive.archaeology.org/0705/etc/pyramid.html",
+            "publisher": "Archaeological Institute of America"
+          }
+        ]
+      },
+      {
+        "urgency": 2,
+        "flag": "Unsupported Claim",
+        "confidence": 0.72,
+        "excerpt": "The materials \"left over\" from reducing the trapezoid were then, in very efficient Egyptian fashion, used to produce the next pyramid on the plateau.",
+        "reasoning": "This claim — that leftover material from one pyramid was systematically used to build the next one on the Giza plateau — is presented as a probable fact without citation to any archaeological evidence, primary source, or expert. The three main Giza pyramids were built by different pharaohs over roughly a century and have distinct stone sources. This specific claim is speculative and not documented in Egyptological literature.",
+        "sources": [
+          {
+            "title": "Pyramid – Britannica",
+            "url": "https://www.britannica.com/technology/pyramid-architecture",
+            "publisher": "Encyclopaedia Britannica"
+          }
+        ]
+      },
+      {
+        "urgency": 2,
+        "flag": "Missing Context",
+        "confidence": 0.80,
+        "excerpt": "Every few years, someone comes up with a new \"this is how the pyramids were built\" theory.",
+        "reasoning": "While framed as a credible new theory, the article provides no information about who authored the theory (it references a YouTube video by 'Dami Lee,' an architecture content creator, not an Egyptologist or engineer), the theory's publication status, or whether any professional archaeologists have reviewed or endorsed it. Readers are given no context to evaluate the theory's academic standing.",
+        "sources": [
+          {
+            "title": "Were the Egyptian Pyramids Not Built Up, But Carved Down? – Open Culture",
+            "url": "https://www.openculture.com/2026/02/were-the-egyptian-pyramids-not-built-up-but-carved-down.html",
+            "publisher": "Open Culture"
+          }
+        ]
+      },
+      {
+        "urgency": 2,
+        "flag": "Loaded Language",
+        "confidence": 0.65,
+        "excerpt": "This theory works.",
+        "reasoning": "The phrase 'This theory works' is an unqualified declaration of validity for an unreviewed popular theory, presented without qualification or attribution. It conflates engineering plausibility (which may be reasonable to explore) with archaeological validity, which requires evidence beyond logical consistency.",
+        "sources": []
+      },
+      {
+        "urgency": 1,
+        "flag": "Misleading Framing",
+        "confidence": 0.60,
+        "excerpt": "In addition to aliens or long-forgotten super technologies",
+        "reasoning": "Grouping mainstream ramp theories implicitly with alien and 'super technology' fringe theories by listing them in close proximity subtly delegitimizes the serious scholarly ramp-based literature, which is the current best-supported framework among professional Egyptologists.",
+        "sources": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="56" fill="url(#gradient)" stroke="#fff" stroke-width="4"/>
+  
+  <!-- Extension icon - puzzle piece style -->
+  <path d="M40 40 L40 55 Q40 60 45 60 L55 60 Q60 60 60 55 L60 45 Q60 40 65 40 L80 40 Q85 40 85 45 L85 60 Q85 65 80 65 L70 65 Q65 65 65 70 L65 80 Q65 85 70 85 L85 85 Q90 85 90 80 L90 65 Q90 60 85 60 L85 45 Q85 35 75 35 L65 35 Q60 35 60 40 L60 50 Q60 55 55 55 L45 55 Q40 55 40 50 Z" fill="#fff" opacity="0.9"/>
+  
+  <!-- Highlight dots -->
+  <circle cx="50" cy="50" r="3" fill="#fff"/>
+  <circle cx="75" cy="75" r="3" fill="#fff"/>
+</svg>

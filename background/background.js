@@ -1,0 +1,284 @@
+// Background script (Service Worker) for cross-browser extension
+// This script runs in the background and handles extension lifecycle events
+
+// Extension installation and updates
+chrome.runtime.onInstalled.addListener((details) => {
+    console.log('Extension installed/updated:', details);
+    
+    switch (details.reason) {
+        case 'install':
+            handleInstall();
+            break;
+        case 'update':
+            handleUpdate(details.previousVersion);
+            break;
+        case 'chrome_update':
+        case 'shared_module_update':
+            console.log('Browser or shared module updated');
+            break;
+    }
+});
+
+// Extension startup
+chrome.runtime.onStartup.addListener(() => {
+    console.log('Extension started');
+    initializeExtension();
+});
+
+// Handle extension installation
+async function handleInstall() {
+    console.log('Extension installed for the first time');
+    
+    // Set default settings
+    await chrome.storage.local.set({
+        extensionEnabled: true,
+        actionCount: 0,
+        installDate: Date.now(),
+        version: chrome.runtime.getManifest().version
+    });
+    
+    // Set badge text
+    chrome.action.setBadgeText({ text: 'NEW' });
+    chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
+    
+    // Clear badge after 5 seconds
+    setTimeout(() => {
+        chrome.action.setBadgeText({ text: '' });
+    }, 5000);
+}
+
+// Handle extension updates
+async function handleUpdate(previousVersion) {
+    console.log(`Extension updated from ${previousVersion} to ${chrome.runtime.getManifest().version}`);
+    
+    // Update version in storage
+    await chrome.storage.local.set({
+        version: chrome.runtime.getManifest().version,
+        updateDate: Date.now()
+    });
+    
+    // Show update badge
+    chrome.action.setBadgeText({ text: 'UPD' });
+    chrome.action.setBadgeBackgroundColor({ color: '#17a2b8' });
+    
+    // Clear badge after 5 seconds
+    setTimeout(() => {
+        chrome.action.setBadgeText({ text: '' });
+    }, 5000);
+}
+
+// Initialize extension
+async function initializeExtension() {
+    console.log('Initializing extension...');
+    
+    // Check if extension is enabled
+    const result = await chrome.storage.local.get(['extensionEnabled']);
+    if (result.extensionEnabled === false) {
+        console.log('Extension is disabled');
+        return;
+    }
+    
+    // Set up context menus
+    setupContextMenus();
+    
+    // Set up alarms if needed
+    setupAlarms();
+}
+
+// Set up context menus
+function setupContextMenus() {
+    // Remove existing menus
+    chrome.contextMenus.removeAll(() => {
+        // Add main menu item
+        chrome.contextMenus.create({
+            id: 'main-menu',
+            title: 'Extension Starter',
+            contexts: ['page', 'selection']
+        });
+        
+        // Add submenu items
+        chrome.contextMenus.create({
+            id: 'get-page-info',
+            parentId: 'main-menu',
+            title: 'Get Page Info',
+            contexts: ['page']
+        });
+        
+        chrome.contextMenus.create({
+            id: 'highlight-headings',
+            parentId: 'main-menu',
+            title: 'Highlight Headings',
+            contexts: ['page']
+        });
+        
+        chrome.contextMenus.create({
+            id: 'analyze-selection',
+            parentId: 'main-menu',
+            title: 'Analyze Selection',
+            contexts: ['selection']
+        });
+    });
+}
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    console.log('Context menu clicked:', info.menuItemId);
+    
+    try {
+        switch (info.menuItemId) {
+            case 'get-page-info':
+                const pageInfo = await chrome.tabs.sendMessage(tab.id, {
+                    action: 'getPageInfo'
+                });
+                console.log('Page info:', pageInfo);
+                
+                // Show notification with page info
+                chrome.notifications.create({
+                    type: 'basic',
+                    iconUrl: 'icons/icon48.png',
+                    title: 'Page Information',
+                    message: `Title: ${pageInfo.title}\nLinks: ${pageInfo.links}\nImages: ${pageInfo.images}`
+                });
+                break;
+                
+            case 'highlight-headings':
+                await chrome.tabs.sendMessage(tab.id, {
+                    action: 'highlightElements',
+                    selector: 'h1, h2, h3, h4, h5, h6'
+                });
+                break;
+                
+            case 'analyze-selection':
+                if (info.selectionText) {
+                    console.log('Selected text:', info.selectionText);
+                    
+                    // Store selection analysis
+                    await chrome.storage.local.set({
+                        [`selection_${Date.now()}`]: {
+                            text: info.selectionText,
+                            url: info.pageUrl,
+                            timestamp: Date.now(),
+                            length: info.selectionText.length,
+                            wordCount: info.selectionText.split(/\s+/).length
+                        }
+                    });
+                    
+                    // Show notification
+                    chrome.notifications.create({
+                        type: 'basic',
+                        iconUrl: 'icons/icon48.png',
+                        title: 'Selection Analyzed',
+                        message: `Text length: ${info.selectionText.length} characters\nWord count: ${info.selectionText.split(/\s+/).length} words`
+                    });
+                }
+                break;
+        }
+    } catch (error) {
+        console.error('Error handling context menu:', error);
+    }
+});
+
+// Set up alarms for periodic tasks
+function setupAlarms() {
+    // Clear existing alarms
+    chrome.alarms.clearAll();
+    
+    // Create a daily cleanup alarm
+    chrome.alarms.create('dailyCleanup', {
+        delayInMinutes: 1, // First run after 1 minute
+        periodInMinutes: 24 * 60 // Then every 24 hours
+    });
+}
+
+// Handle alarms
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+    console.log('Alarm triggered:', alarm.name);
+    
+    switch (alarm.name) {
+        case 'dailyCleanup':
+            await performDailyCleanup();
+            break;
+    }
+});
+
+// Perform daily cleanup tasks
+async function performDailyCleanup() {
+    console.log('Performing daily cleanup...');
+    
+    try {
+        // Get all stored data
+        const allData = await chrome.storage.local.get();
+        const now = Date.now();
+        const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000); // 7 days in milliseconds
+        
+        // Remove old page stats and selections
+        const keysToRemove = [];
+        for (const [key, value] of Object.entries(allData)) {
+            if ((key.startsWith('pageStats_') || key.startsWith('selection_')) && 
+                value.timestamp && value.timestamp < oneWeekAgo) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        if (keysToRemove.length > 0) {
+            await chrome.storage.local.remove(keysToRemove);
+            console.log(`Cleaned up ${keysToRemove.length} old entries`);
+        }
+        
+        // Update cleanup stats
+        await chrome.storage.local.set({
+            lastCleanup: now,
+            cleanupCount: (allData.cleanupCount || 0) + 1
+        });
+        
+    } catch (error) {
+        console.error('Error during cleanup:', error);
+    }
+}
+
+// Listen for messages from content scripts and popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('Background received message:', message);
+    
+    switch (message.action) {
+        case 'contentScriptLoaded':
+            console.log('Content script loaded on:', message.url);
+            // You can track which tabs have the content script loaded
+            sendResponse({ success: true });
+            break;
+            
+        case 'getExtensionInfo':
+            sendResponse({
+                version: chrome.runtime.getManifest().version,
+                name: chrome.runtime.getManifest().name
+            });
+            break;
+            
+        default:
+            console.warn('Unknown message action:', message.action);
+            sendResponse({ success: false, message: 'Unknown action' });
+    }
+    
+    return true; // Keep message channel open for async response
+});
+
+// Handle tab updates (navigation, refresh, etc.)
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && tab.url) {
+        console.log('Tab updated:', tab.url);
+        
+        // You can perform actions when pages load
+        // For example, inject additional scripts or check page content
+    }
+});
+
+// Handle extension icon clicks (when no popup is defined)
+chrome.action.onClicked.addListener((tab) => {
+    console.log('Extension icon clicked on tab:', tab.url);
+    
+    // This won't fire if popup is defined in manifest
+    // But useful for extensions that don't use popups
+});
+
+// Initialize on script load
+initializeExtension();

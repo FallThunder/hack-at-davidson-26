@@ -1,0 +1,34 @@
+{
+  "name": "cross-browser-extension-starter",
+  "version": "1.0.0",
+  "description": "A starter template for cross-browser extensions",
+  "scripts": {
+    "build": "echo 'Build process - customize as needed'",
+    "test": "echo 'Test suite - add your tests here'",
+    "lint": "echo 'Linting - add ESLint or similar'",
+    "package": "zip -r extension.zip . -x '*.git*' 'node_modules/*' 'package*.json' '*.md'"
+  },
+  "keywords": [
+    "browser-extension",
+    "chrome-extension",
+    "firefox-addon",
+    "cross-browser",
+    "manifest-v3"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "web-ext": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/cross-browser-extension-starter"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/cross-browser-extension-starter/issues"
+  },
+  "homepage": "https://github.com/yourusername/cross-browser-extension-starter#readme"
+}

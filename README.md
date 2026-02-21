@@ -4,14 +4,14 @@
 
 ### Instant AI Credibility Analysis for News Articles
 
-Detect bias. Verify claims. Understand truth — instantly.
+Detect bias. Verify claims. Understand truth — at a glance.
 
 <br>
 
-![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Hackathon](https://img.shields.io/badge/Hack@Davidson-2026-blue.svg)
-![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)
-![AI](https://img.shields.io/badge/powered%20by-AI-purple.svg)
+![Version](https://img.shields.io/badge/version-1.3.0-orange.svg)
+![Platform](https://img.shields.io/badge/platform-Chrome-green.svg)
+![AI](https://img.shields.io/badge/powered%20by-Gemini%202.5%20Flash-purple.svg)
 
 <br>
 
@@ -21,67 +21,120 @@ Detect bias. Verify claims. Understand truth — instantly.
 
 ---
 
-# Overview
+## What It Does
 
-**Evident is a browser extension that instantly analyzes news articles using artificial intelligence to determine credibility, detect bias, and explain reliability.**
+Evident is a Chrome extension that analyzes news articles across **6 trust dimensions** and surfaces inline sentence-level flags directly on the page — without interrupting your reading.
 
-Instead of relying on intuition or manually researching sources, users receive immediate, evidence-based analysis directly in their browser.
+Click the Evident icon → a side panel streams in:
 
-Evident integrates seamlessly into the reading experience, providing instant clarity without interrupting workflow.
+- A **Trust Score** (0–100) with animated arc gauge
+- **Site profile** — political bias bar, factual reporting rating, tone
+- **6 dimension cards** — fact-checking, rhetoric, headline accuracy, statistics, source diversity, emotional arc
+- **Fact flags** — color-coded sentence highlights (yellow/orange/red by urgency) with confidence %, reasoning, and sources
 
----
-
-# The Problem
-
-Modern information moves faster than verification.
-
-Users encounter articles constantly across:
-
-- Social media
-- News websites
-- Forums
-- Blogs
-- Shared links
-
-But determining credibility requires:
-
-- Researching sources
-- Checking claims
-- Evaluating bias
-- Comparing viewpoints
-
-Most users do not have the time or tools to do this.
-
-This creates an environment where misinformation spreads easily.
+Highlighted sentences are interactive: hover for a tooltip, click for a full card. Clicking a flag card in the panel scrolls and pulses the matching sentence in the article.
 
 ---
 
-# The Solution
+## Current State
 
-Evident brings AI-powered credibility analysis directly into the browser.
+The extension currently runs on **pre-analyzed mock data** for two specific articles, with simulated streaming delays that mirror a real Gemini API response:
 
-With one click, Evident provides:
+| Article | URL |
+|---------|-----|
+| Fox News — Scott Bessent tariffs | `foxnews.com/media/scott-bessent-says-supreme-court...` |
+| Boing Boing — Egypt pyramids | `boingboing.net/2026/02/09/how-subraction-not-addition...` |
 
-- Credibility rating
-- Bias assessment
-- Fact-based analysis
-- Explanation of conclusions
-
-All in seconds.
-
-No manual research required.
+On any other page, the panel shows a "no analysis available" message. The live Gemini API layer (`/api/analyze`) is the next step.
 
 ---
 
-# How to use
+## Features
 
-```text
-User opens article
-        ↓
-Clicks Evident extension
-        ↓
-Article content extracted
-        ↓
-AI analyzes credibility and bias
-        ↓
-Results displayed instantly
+- **Streaming UI** — results appear progressively (site profile → dimensions → flags), skeleton cards fill in as data arrives
+- **Trust Meter** — animated SVG arc + count-up number, color-coded by tier (red / yellow / green)
+- **Inline highlights** — urgency-coded spans injected directly into article text; beat any page `!important` CSS via inline style priority
+- **Hover tooltips** — fixed-position, escape `overflow:hidden` containers on any news site
+- **Click popovers** — flag detail card (reasoning + sources) anchored to the highlighted text
+- **Bidirectional scroll** — click article highlight → side panel scrolls to flag card; click flag card excerpt → article scrolls to highlight with pulse animation
+- **Active flag tracking** — blue ring follows whichever flag was most recently activated (from article or panel)
+- **Dark / light mode** — synced to system preference, manual override
+- **Auto re-analysis** — re-runs when you switch tabs, navigate, or refresh the page
+- **Clean close** — closing the panel removes all highlights, tooltips, and popovers from the article
+
+---
+
+## Installation (Developer Mode)
+
+```bash
+npm install
+npm run build
+```
+
+Then in Chrome:
+1. Go to `chrome://extensions`
+2. Enable **Developer mode** (top right)
+3. Click **Load unpacked** → select the `/dist` folder
+
+To test: navigate to one of the two supported article URLs above, then click the Evident toolbar icon.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Extension | Chrome Manifest V3 |
+| Side panel UI | React 18 + Vite 5 + Tailwind CSS 3.4 |
+| Analysis API (planned) | Gemini 2.5 Flash via Vercel serverless proxy |
+| Build | Three-pass Vite `build()` in `build.js` (side panel, content script IIFE, service worker ESM) |
+| State | `useReducer` state machine with simulated NDJSON streaming |
+| Text matching | Jaccard word similarity (threshold 0.5) with cross-node DOM range wrapping |
+
+---
+
+## Architecture
+
+```
+/src/
+  sidepanel/        React SPA (side panel)
+    App.jsx         Root — orchestrates analysis + message routing
+    mockData.js     URL-keyed mock data adapter (example2 + example3)
+    components/     TrustMeter, SiteProfile, DimensionCard, FlagCard, ...
+    hooks/
+      useAnalysis.js   useReducer state machine + mock streaming
+      useHighlights.js APPLY / TOGGLE / CLEAR / SCROLL highlight control
+  content/
+    content.js      Article extraction, highlight injection, tooltip + popover
+    highlight.css   Urgency colors, tooltip, popover styles
+  background/
+    service-worker.js  Panel open/close, message relay, tab/navigation events
+  utils/
+    scoring.js         Weighted Trust Score formula
+    articleExtractor.js Heuristic article text extraction
+/api/
+  analyze.js        Vercel serverless proxy → Gemini API (to be wired up)
+/public/
+  manifest.json     MV3 manifest
+  icons/            16, 48, 128px + trust-tier colored variants
+/exampleFiles/
+  example2/         Fox News article + pre-analyzed JSON
+  example3/         Boing Boing article + pre-analyzed JSON
+```
+
+---
+
+## Trust Score Formula
+
+```
+TrustScore = factCheck×0.25 + rhetoric×0.20 + headlineAccuracy×0.15
+           + statistics×0.15 + sourceDiversity×0.15 + emotionalArc×0.10
+```
+
+- **0–39** Low Trust (red)
+- **40–69** Moderate (yellow)
+- **70–100** High Trust (green)
+
+---
+
+*Built at Hack@Davidson 2026 (Feb 20–22)*

@@ -1,8 +1,7 @@
-// Popup script for cross-browser extension
+// Evident Popup - Fact-checking and bias analysis interface
 document.addEventListener('DOMContentLoaded', function() {
-    const actionBtn = document.getElementById('actionBtn');
-    const settingsBtn = document.getElementById('settingsBtn');
     const analyzeBtn = document.getElementById('analyzeBtn');
+    const exportBtn = document.getElementById('exportBtn');
     const statusText = document.getElementById('statusText');
     
     // Analysis UI elements
@@ -10,15 +9,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const analysisResults = document.getElementById('analysisResults');
     const errorMessage = document.getElementById('errorMessage');
     
-    // News analysis elements
+    // Status elements
+    const articleStatus = document.getElementById('articleStatus');
     const newsStatus = document.getElementById('newsStatus');
-    const newsConfidence = document.getElementById('newsConfidence');
-    const newsConfidenceText = document.getElementById('newsConfidenceText');
-    const newsDetails = document.getElementById('newsDetails');
+    const confidenceScore = document.getElementById('confidenceScore');
     
-    // Popularity analysis elements
-    const popularityLevel = document.getElementById('popularityLevel');
-    const siteMetrics = document.getElementById('siteMetrics');
+    // Bias analysis elements
+    const politicalBias = document.getElementById('politicalBias');
+    const emotionalBias = document.getElementById('emotionalBias');
+    const claimsCount = document.getElementById('claimsCount');
+    const articleDetails = document.getElementById('articleDetails');
 
     // Load page analysis on popup open
     loadPageAnalysis();
@@ -28,40 +28,23 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPageAnalysis(true);
     });
 
-    // Action button click handler
-    actionBtn.addEventListener('click', async function() {
+    // Export button click handler
+    exportBtn.addEventListener('click', async function() {
         try {
-            // Get the active tab
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            
-            // Send message to content script
-            await chrome.tabs.sendMessage(tab.id, {
-                action: 'performAction',
-                data: { timestamp: Date.now() }
+            const analysis = await chrome.tabs.sendMessage(tab.id, {
+                action: 'getPageAnalysis'
             });
             
-            updateStatus('Action performed!', 'success');
-            
-            // Store action in storage
-            await chrome.storage.local.set({
-                lastAction: Date.now(),
-                actionCount: await getActionCount() + 1
-            });
-            
+            if (analysis && !analysis.error) {
+                exportAnalysisReport(analysis);
+                updateStatus('Report exported!', 'success');
+            } else {
+                updateStatus('No analysis to export', 'error');
+            }
         } catch (error) {
-            console.error('Error performing action:', error);
-            updateStatus('Error occurred', 'error');
-        }
-    });
-
-    // Settings button click handler
-    settingsBtn.addEventListener('click', function() {
-        // Open options page or show settings
-        if (chrome.runtime.openOptionsPage) {
-            chrome.runtime.openOptionsPage();
-        } else {
-            // Fallback for browsers that don't support options page
-            updateStatus('Settings clicked!', 'info');
+            console.error('Error exporting report:', error);
+            updateStatus('Export failed', 'error');
         }
     });
 
@@ -111,17 +94,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayAnalysis(analysis) {
         loadingIndicator.style.display = 'none';
         errorMessage.style.display = 'none';
-        analysisResults.style.display = 'flex';
+        analysisResults.style.display = 'block';
         
-        // Display news analysis
-        displayNewsAnalysis(analysis);
+        // Display article status
+        displayArticleStatus(analysis);
         
-        // Display popularity analysis
-        displayPopularityAnalysis(analysis);
+        // Display bias analysis
+        displayBiasAnalysis(analysis);
+        
+        // Display article details
+        displayArticleDetails(analysis);
     }
 
-    // Display news article analysis
-    function displayNewsAnalysis(analysis) {
+    // Display article status
+    function displayArticleStatus(analysis) {
         const isNews = analysis.isNewsArticle;
         const confidence = Math.round(analysis.newsConfidence || 0);
         
@@ -140,106 +126,98 @@ document.addEventListener('DOMContentLoaded', function() {
             statusTextEl.textContent = 'Not a news article';
         }
         
-        // Update confidence bar
-        newsConfidence.style.width = `${confidence}%`;
-        newsConfidenceText.textContent = `${confidence}%`;
+        // Update confidence score
+        confidenceScore.textContent = `${confidence}%`;
+    }
+
+    // Display bias analysis
+    function displayBiasAnalysis(analysis) {
+        const bias = analysis.biasAnalysis || {};
+        const emotional = analysis.emotionalAnalysis || {};
         
-        // Update details
+        // Update political bias
+        const politicalBiasText = bias.politicalBias || 'neutral';
+        politicalBias.textContent = formatBiasText(politicalBiasText);
+        politicalBias.className = `metric-value ${politicalBiasText.replace('-', '')}`;
+        
+        // Update emotional manipulation
+        const emotionalRisk = emotional.manipulationRisk || 'low';
+        emotionalBias.textContent = formatBiasText(emotionalRisk);
+        emotionalBias.className = `metric-value ${emotionalRisk}`;
+        
+        // Update claims count
+        const claims = analysis.factCheckingData?.numericalClaims?.length || 0;
+        claimsCount.textContent = claims.toString();
+    }
+
+    // Display article details
+    function displayArticleDetails(analysis) {
         let detailsHtml = '';
+        
         if (analysis.articleData) {
             const data = analysis.articleData;
             
-            // Handle authors (can be array or string)
+            // Handle authors
             if (data.authors && Array.isArray(data.authors) && data.authors.length > 0) {
                 const authorText = data.authors.join(', ');
-                detailsHtml += `<div class="detail-item"><span>Author${data.authors.length > 1 ? 's' : ''}:</span><span>${escapeHtml(authorText)}</span></div>`;
+                detailsHtml += `<div class="detail-row"><span class="detail-label">Author${data.authors.length > 1 ? 's' : ''}:</span><span class="detail-value">${escapeHtml(authorText)}</span></div>`;
             } else if (data.author && typeof data.author === 'string') {
-                detailsHtml += `<div class="detail-item"><span>Author:</span><span>${escapeHtml(data.author)}</span></div>`;
+                detailsHtml += `<div class="detail-row"><span class="detail-label">Author:</span><span class="detail-value">${escapeHtml(data.author)}</span></div>`;
             }
             
             // Handle publisher
             if (data.publisher) {
-                detailsHtml += `<div class="detail-item"><span>Publisher:</span><span>${escapeHtml(data.publisher)}</span></div>`;
+                detailsHtml += `<div class="detail-row"><span class="detail-label">Publisher:</span><span class="detail-value">${escapeHtml(data.publisher)}</span></div>`;
             }
             
             // Handle publication date
             if (data.publishDate) {
-                detailsHtml += `<div class="detail-item"><span>Published:</span><span>${formatDate(data.publishDate)}</span></div>`;
-            }
-            
-            // Handle modified date
-            if (data.modifiedDate && data.modifiedDate !== data.publishDate) {
-                detailsHtml += `<div class="detail-item"><span>Modified:</span><span>${formatDate(data.modifiedDate)}</span></div>`;
-            }
-            
-            // Handle section/category
-            if (data.section) {
-                detailsHtml += `<div class="detail-item"><span>Section:</span><span>${escapeHtml(data.section)}</span></div>`;
+                detailsHtml += `<div class="detail-row"><span class="detail-label">Published:</span><span class="detail-value">${formatDate(data.publishDate)}</span></div>`;
             }
             
             // Handle word count
             if (data.wordCount) {
-                detailsHtml += `<div class="detail-item"><span>Word count:</span><span>${data.wordCount.toLocaleString()}</span></div>`;
+                detailsHtml += `<div class="detail-row"><span class="detail-label">Word count:</span><span class="detail-value">${data.wordCount.toLocaleString()}</span></div>`;
             }
             
-            // Handle paragraph count
-            if (data.paragraphCount) {
-                detailsHtml += `<div class="detail-item"><span>Paragraphs:</span><span>${data.paragraphCount}</span></div>`;
-            }
-            
-            // Handle keywords
-            if (data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
-                const keywordText = data.keywords.slice(0, 5).join(', '); // Show first 5 keywords
-                detailsHtml += `<div class="detail-item"><span>Keywords:</span><span>${escapeHtml(keywordText)}</span></div>`;
+            // Handle site popularity
+            if (analysis.sitePopularity) {
+                detailsHtml += `<div class="detail-row"><span class="detail-label">Site type:</span><span class="detail-value">${formatBiasText(analysis.sitePopularity)}</span></div>`;
             }
         }
-        newsDetails.innerHTML = detailsHtml;
-
-        // Update last updated time
-        const lastUpdated = document.getElementById('lastUpdated');
-        if (lastUpdated) {
-            lastUpdated.textContent = `Last analyzed: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-        }
+        
+        articleDetails.innerHTML = detailsHtml;
     }
 
-    // Display site popularity analysis
-    function displayPopularityAnalysis(analysis) {
-        const popularity = analysis.sitePopularity || 'unknown';
-        const score = analysis.popularityScore || 0;
-        
-        // Update popularity badge
-        const badge = popularityLevel.querySelector('.level-badge');
-        const description = popularityLevel.querySelector('.level-description');
-        
-        badge.className = `level-badge ${popularity}`;
-        badge.textContent = popularity.charAt(0).toUpperCase() + popularity.slice(1);
-        
-        // Set description based on popularity level
-        const descriptions = {
-            major: 'Well-known, high-traffic website',
-            established: 'Recognized site with good reputation',
-            moderate: 'Moderately popular website',
-            emerging: 'Growing or niche website',
-            unknown: 'Limited information available'
+    // Format bias text for display
+    function formatBiasText(text) {
+        return text.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    // Export analysis report
+    function exportAnalysisReport(analysis) {
+        const report = {
+            url: analysis.url,
+            title: analysis.title,
+            analyzedAt: new Date().toISOString(),
+            isNewsArticle: analysis.isNewsArticle,
+            confidence: analysis.newsConfidence,
+            biasAnalysis: analysis.biasAnalysis,
+            emotionalAnalysis: analysis.emotionalAnalysis,
+            articleData: analysis.articleData,
+            factCheckingData: analysis.factCheckingData
         };
-        description.textContent = descriptions[popularity] || descriptions.unknown;
         
-        // Update site metrics
-        let metricsHtml = '';
-        if (analysis.siteMetrics) {
-            const metrics = analysis.siteMetrics;
-            metricsHtml += `<div class="metric-item"><span>Domain:</span><span>${analysis.domain}</span></div>`;
-            if (metrics.loadTime) {
-                metricsHtml += `<div class="metric-item"><span>Load time:</span><span>${metrics.loadTime}ms</span></div>`;
-            }
-            if (metrics.hasSSL !== undefined) {
-                metricsHtml += `<div class="metric-item"><span>SSL:</span><span>${metrics.hasSSL ? 'Yes' : 'No'}</span></div>`;
-            }
-            if (metrics.socialMediaLinks) {
-                metricsHtml += `<div class="metric-item"><span>Social links:</span><span>${metrics.socialMediaLinks}</span></div>`;
-            }
-        }
-        siteMetrics.innerHTML = metricsHtml;
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `evident-analysis-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     // Format date string

@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Smart Page Analyzer",
+  "name": "Evident",
   "version": "1.0.0",
-  "description": "Intelligently detects news articles and analyzes site popularity for Firefox",
+  "description": "AI-powered fact-checking and bias analysis for news articles. Detect emotional manipulation, political bias, and verify claims.",
   
   "permissions": [
     "activeTab",
@@ -14,7 +14,7 @@
   
   "browser_action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Smart Page Analyzer",
+    "default_title": "Evident - Fact Check & Bias Analysis",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

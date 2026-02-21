@@ -101,51 +101,51 @@ function setupContextMenus() {
                 return;
             }
             
-            // Add main menu item
-            chrome.contextMenus.create({
-                id: 'main-menu',
-                title: 'Smart Page Analyzer',
-                contexts: ['page', 'selection']
-            }, () => {
-                if (chrome.runtime.lastError) {
-                    console.log('Context menu creation error:', chrome.runtime.lastError);
-                    return;
-                }
-            });
+        // Add main menu item
+        chrome.contextMenus.create({
+            id: 'main-menu',
+            title: 'Evident - Fact Check',
+            contexts: ['page', 'selection']
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('Context menu creation error:', chrome.runtime.lastError);
+                return;
+            }
+        });
             
             // Add submenu items
-            chrome.contextMenus.create({
-                id: 'get-page-info',
-                parentId: 'main-menu',
-                title: 'Get Page Info',
-                contexts: ['page']
-            }, () => {
-                if (chrome.runtime.lastError) {
-                    console.log('Context menu creation error:', chrome.runtime.lastError);
-                }
-            });
-            
-            chrome.contextMenus.create({
-                id: 'highlight-headings',
-                parentId: 'main-menu',
-                title: 'Highlight Headings',
-                contexts: ['page']
-            }, () => {
-                if (chrome.runtime.lastError) {
-                    console.log('Context menu creation error:', chrome.runtime.lastError);
-                }
-            });
-            
-            chrome.contextMenus.create({
-                id: 'analyze-selection',
-                parentId: 'main-menu',
-                title: 'Analyze Selection',
-                contexts: ['selection']
-            }, () => {
-                if (chrome.runtime.lastError) {
-                    console.log('Context menu creation error:', chrome.runtime.lastError);
-                }
-            });
+        chrome.contextMenus.create({
+            id: 'analyze-bias',
+            parentId: 'main-menu',
+            title: 'Analyze Bias & Claims',
+            contexts: ['page']
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('Context menu creation error:', chrome.runtime.lastError);
+            }
+        });
+        
+        chrome.contextMenus.create({
+            id: 'fact-check',
+            parentId: 'main-menu',
+            title: 'Fact Check Article',
+            contexts: ['page']
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('Context menu creation error:', chrome.runtime.lastError);
+            }
+        });
+        
+        chrome.contextMenus.create({
+            id: 'analyze-selection',
+            parentId: 'main-menu',
+            title: 'Analyze Selected Text',
+            contexts: ['selection']
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('Context menu creation error:', chrome.runtime.lastError);
+            }
+        });
         });
     } catch (error) {
         console.error('Error setting up context menus:', error);
@@ -158,26 +158,37 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     
     try {
         switch (info.menuItemId) {
-            case 'get-page-info':
-                const pageInfo = await chrome.tabs.sendMessage(tab.id, {
-                    action: 'getPageInfo'
+            case 'analyze-bias':
+                const analysis = await chrome.tabs.sendMessage(tab.id, {
+                    action: 'getPageAnalysis'
                 });
-                console.log('Page info:', pageInfo);
+                console.log('Bias analysis:', analysis);
                 
-                // Show notification with page info
-                chrome.notifications.create({
-                    type: 'basic',
-                    iconUrl: 'icons/icon48.png',
-                    title: 'Page Information',
-                    message: `Title: ${pageInfo.title}\nLinks: ${pageInfo.links}\nImages: ${pageInfo.images}`
-                });
+                if (analysis && analysis.biasAnalysis) {
+                    const bias = analysis.biasAnalysis;
+                    chrome.notifications.create({
+                        type: 'basic',
+                        iconUrl: 'icons/icon48.png',
+                        title: 'Evident - Bias Analysis',
+                        message: `Political: ${bias.politicalBias}\nEmotional: ${bias.emotionalBias}\nConfidence: ${Math.round(analysis.newsConfidence)}%`
+                    });
+                }
                 break;
                 
-            case 'highlight-headings':
-                await chrome.tabs.sendMessage(tab.id, {
-                    action: 'highlightElements',
-                    selector: 'h1, h2, h3, h4, h5, h6'
+            case 'fact-check':
+                const factCheck = await chrome.tabs.sendMessage(tab.id, {
+                    action: 'getPageAnalysis'
                 });
+                
+                if (factCheck && factCheck.factCheckingData) {
+                    const claims = factCheck.factCheckingData.numericalClaims?.length || 0;
+                    chrome.notifications.create({
+                        type: 'basic',
+                        iconUrl: 'icons/icon48.png',
+                        title: 'Evident - Fact Check',
+                        message: `Found ${claims} numerical claims to verify`
+                    });
+                }
                 break;
                 
             case 'analyze-selection':
@@ -362,9 +373,9 @@ function updateExtensionBadge(analysis, tabId) {
         
         // Update title to show analysis
         const confidence = Math.round(analysis.newsConfidence);
-        const popularity = analysis.sitePopularity;
+        const bias = analysis.biasAnalysis?.politicalBias || 'neutral';
         chrome.action.setTitle({ 
-            title: `Smart Page Analyzer\nNews Article (${confidence}% confidence)\nSite: ${popularity}`,
+            title: `Evident - Fact Check\nNews Article (${confidence}% confidence)\nBias: ${bias}`,
             tabId: tabId 
         });
     } else {
@@ -375,7 +386,7 @@ function updateExtensionBadge(analysis, tabId) {
         });
         
         chrome.action.setTitle({ 
-            title: `Smart Page Analyzer\nSite: ${analysis.sitePopularity}`,
+            title: `Evident - Fact Check\nSite: ${analysis.sitePopularity}`,
             tabId: tabId 
         });
     }

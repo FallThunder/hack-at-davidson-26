@@ -1,4 +1,4 @@
-// Content Analyzer - Intelligent page analysis for news detection and site popularity
+// Evident Content Analyzer - Advanced content extraction and bias analysis for fact-checking
 class ContentAnalyzer {
     constructor() {
         this.newsIndicators = {
@@ -127,6 +127,12 @@ class ContentAnalyzer {
             data: analysis,
             timestamp: Date.now()
         });
+
+        // Extract main content for bias analysis
+        analysis.mainContent = this.extractMainContent();
+        analysis.biasAnalysis = this.analyzeBias(analysis.mainContent);
+        analysis.emotionalAnalysis = this.analyzeEmotionalLanguage(analysis.mainContent);
+        analysis.factCheckingData = this.extractFactCheckingData();
 
         return analysis;
     }
@@ -658,6 +664,380 @@ class ContentAnalyzer {
             return parts.slice(-2).join('.');
         }
         return domain;
+    }
+
+    // Extract main content from the page for analysis
+    extractMainContent() {
+        const content = {
+            title: '',
+            subtitle: '',
+            mainText: '',
+            paragraphs: [],
+            quotes: [],
+            claims: [],
+            sources: [],
+            wordCount: 0
+        };
+
+        // Extract title
+        content.title = document.title || '';
+        
+        // Try to find subtitle/deck
+        const subtitleSelectors = [
+            '.subtitle', '.deck', '.subhead', '.standfirst',
+            '.article-subtitle', '.post-subtitle', '.summary',
+            'h2.subtitle', '.article-deck', '.story-summary'
+        ];
+        
+        for (const selector of subtitleSelectors) {
+            const subtitle = document.querySelector(selector);
+            if (subtitle) {
+                content.subtitle = subtitle.textContent.trim();
+                break;
+            }
+        }
+
+        // Find main article content
+        const articleElement = this.findMainArticleElement();
+        if (articleElement) {
+            // Extract paragraphs
+            const paragraphs = articleElement.querySelectorAll('p');
+            paragraphs.forEach(p => {
+                const text = p.textContent.trim();
+                if (text.length > 20) { // Filter out very short paragraphs
+                    content.paragraphs.push(text);
+                }
+            });
+
+            // Extract quotes
+            const quoteSelectors = ['blockquote', '.quote', '.pullquote', 'q'];
+            quoteSelectors.forEach(selector => {
+                const quotes = articleElement.querySelectorAll(selector);
+                quotes.forEach(quote => {
+                    const text = quote.textContent.trim();
+                    if (text.length > 10) {
+                        content.quotes.push(text);
+                    }
+                });
+            });
+
+            // Extract potential claims (sentences with strong assertions)
+            content.claims = this.extractClaims(content.paragraphs);
+
+            // Extract sources and links
+            content.sources = this.extractSources(articleElement);
+
+            // Combine all text
+            content.mainText = content.paragraphs.join(' ');
+            content.wordCount = content.mainText.split(/\s+/).length;
+        }
+
+        return content;
+    }
+
+    // Find the main article element using multiple strategies
+    findMainArticleElement() {
+        // Try semantic HTML first
+        let article = document.querySelector('article');
+        if (article && article.textContent.length > 500) {
+            return article;
+        }
+
+        // Try common article selectors
+        const articleSelectors = [
+            '[role="article"]', '.article-content', '.post-content',
+            '.entry-content', '.story-content', '.article-body',
+            '.post-body', '.content', '.main-content', '.article-text'
+        ];
+
+        for (const selector of articleSelectors) {
+            const element = document.querySelector(selector);
+            if (element && element.textContent.length > 500) {
+                return element;
+            }
+        }
+
+        // Try to find the element with the most text content
+        const candidates = document.querySelectorAll('div, section, main');
+        let bestCandidate = null;
+        let maxTextLength = 0;
+
+        candidates.forEach(candidate => {
+            const textLength = candidate.textContent.length;
+            const paragraphs = candidate.querySelectorAll('p').length;
+            
+            // Score based on text length and paragraph count
+            const score = textLength + (paragraphs * 100);
+            
+            if (score > maxTextLength && textLength > 500) {
+                maxTextLength = score;
+                bestCandidate = candidate;
+            }
+        });
+
+        return bestCandidate;
+    }
+
+    // Extract potential factual claims from text
+    extractClaims(paragraphs) {
+        const claims = [];
+        const claimIndicators = [
+            /according to/i, /studies show/i, /research indicates/i,
+            /data reveals/i, /statistics show/i, /experts say/i,
+            /reports indicate/i, /analysis shows/i, /findings suggest/i,
+            /\d+%/, /\$[\d,]+/, /\d+ million/, /\d+ billion/,
+            /increased by/i, /decreased by/i, /rose by/i, /fell by/i
+        ];
+
+        paragraphs.forEach(paragraph => {
+            const sentences = paragraph.split(/[.!?]+/);
+            sentences.forEach(sentence => {
+                const trimmed = sentence.trim();
+                if (trimmed.length > 30) {
+                    // Check if sentence contains claim indicators
+                    const hasClaim = claimIndicators.some(pattern => pattern.test(trimmed));
+                    if (hasClaim) {
+                        claims.push(trimmed);
+                    }
+                }
+            });
+        });
+
+        return claims.slice(0, 10); // Limit to top 10 claims
+    }
+
+    // Extract sources and references
+    extractSources(articleElement) {
+        const sources = [];
+        
+        // Find external links
+        const links = articleElement.querySelectorAll('a[href^="http"]');
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            const text = link.textContent.trim();
+            const domain = this.extractDomain(href);
+            
+            if (text.length > 5 && !domain.includes(window.location.hostname)) {
+                sources.push({
+                    text: text,
+                    url: href,
+                    domain: domain,
+                    type: 'external_link'
+                });
+            }
+        });
+
+        // Look for citation patterns
+        const citationPatterns = [
+            /\(Source: ([^)]+)\)/gi,
+            /According to ([^,]+)/gi,
+            /Via ([^,\s]+)/gi
+        ];
+
+        const fullText = articleElement.textContent;
+        citationPatterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(fullText)) !== null) {
+                sources.push({
+                    text: match[1],
+                    type: 'citation'
+                });
+            }
+        });
+
+        return sources.slice(0, 15); // Limit to top 15 sources
+    }
+
+    // Analyze potential bias in the content
+    analyzeBias(content) {
+        const analysis = {
+            politicalBias: 'neutral',
+            politicalScore: 0,
+            emotionalBias: 'neutral',
+            emotionalScore: 0,
+            biasIndicators: [],
+            confidence: 0
+        };
+
+        if (!content.mainText) return analysis;
+
+        const text = content.mainText.toLowerCase();
+
+        // Political bias indicators
+        const leftBiasWords = [
+            'progressive', 'liberal', 'social justice', 'inequality', 'systemic',
+            'marginalized', 'oppression', 'climate crisis', 'corporate greed',
+            'wealth gap', 'exploitation', 'discrimination'
+        ];
+
+        const rightBiasWords = [
+            'conservative', 'traditional values', 'law and order', 'free market',
+            'personal responsibility', 'individual liberty', 'patriotic',
+            'border security', 'fiscal responsibility', 'constitutional rights'
+        ];
+
+        let leftScore = 0;
+        let rightScore = 0;
+
+        leftBiasWords.forEach(word => {
+            const matches = (text.match(new RegExp(word, 'g')) || []).length;
+            leftScore += matches;
+        });
+
+        rightBiasWords.forEach(word => {
+            const matches = (text.match(new RegExp(word, 'g')) || []).length;
+            rightScore += matches;
+        });
+
+        // Determine political bias
+        const totalPolitical = leftScore + rightScore;
+        if (totalPolitical > 0) {
+            const leftRatio = leftScore / totalPolitical;
+            if (leftRatio > 0.7) {
+                analysis.politicalBias = 'left-leaning';
+                analysis.politicalScore = Math.min(leftRatio * 100, 100);
+            } else if (leftRatio < 0.3) {
+                analysis.politicalBias = 'right-leaning';
+                analysis.politicalScore = Math.min((1 - leftRatio) * 100, 100);
+            }
+        }
+
+        // Emotional bias analysis
+        const emotionalWords = {
+            positive: ['amazing', 'excellent', 'outstanding', 'brilliant', 'fantastic', 'wonderful'],
+            negative: ['terrible', 'awful', 'horrible', 'devastating', 'catastrophic', 'outrageous'],
+            sensational: ['shocking', 'unbelievable', 'stunning', 'explosive', 'bombshell', 'breaking']
+        };
+
+        let emotionalScore = 0;
+        Object.values(emotionalWords).flat().forEach(word => {
+            const matches = (text.match(new RegExp(word, 'g')) || []).length;
+            emotionalScore += matches;
+        });
+
+        if (emotionalScore > 5) {
+            analysis.emotionalBias = 'high';
+            analysis.emotionalScore = Math.min(emotionalScore * 10, 100);
+            analysis.biasIndicators.push('High emotional language detected');
+        }
+
+        // Calculate overall confidence
+        analysis.confidence = Math.min((totalPolitical + emotionalScore) * 5, 100);
+
+        return analysis;
+    }
+
+    // Analyze emotional language patterns
+    analyzeEmotionalLanguage(content) {
+        const analysis = {
+            sentiment: 'neutral',
+            emotionalIntensity: 0,
+            manipulationRisk: 'low',
+            patterns: []
+        };
+
+        if (!content.mainText) return analysis;
+
+        const text = content.mainText.toLowerCase();
+
+        // Fear-based language
+        const fearWords = [
+            'dangerous', 'threat', 'crisis', 'emergency', 'alarming',
+            'terrifying', 'devastating', 'catastrophic', 'urgent', 'critical'
+        ];
+
+        // Anger-inducing language
+        const angerWords = [
+            'outrageous', 'disgusting', 'appalling', 'shocking', 'scandalous',
+            'betrayal', 'corruption', 'fraud', 'lies', 'deception'
+        ];
+
+        // Superlatives and absolutes
+        const absoluteWords = [
+            'always', 'never', 'all', 'none', 'completely', 'totally',
+            'absolutely', 'definitely', 'certainly', 'undoubtedly'
+        ];
+
+        let fearScore = 0;
+        let angerScore = 0;
+        let absoluteScore = 0;
+
+        fearWords.forEach(word => {
+            const matches = (text.match(new RegExp(word, 'g')) || []).length;
+            fearScore += matches;
+        });
+
+        angerWords.forEach(word => {
+            const matches = (text.match(new RegExp(word, 'g')) || []).length;
+            angerScore += matches;
+        });
+
+        absoluteWords.forEach(word => {
+            const matches = (text.match(new RegExp(word, 'g')) || []).length;
+            absoluteScore += matches;
+        });
+
+        const totalEmotional = fearScore + angerScore + absoluteScore;
+        analysis.emotionalIntensity = Math.min(totalEmotional * 5, 100);
+
+        if (fearScore > 3) analysis.patterns.push('Fear-based language');
+        if (angerScore > 3) analysis.patterns.push('Anger-inducing language');
+        if (absoluteScore > 5) analysis.patterns.push('Absolute statements');
+
+        // Determine manipulation risk
+        if (totalEmotional > 8) {
+            analysis.manipulationRisk = 'high';
+        } else if (totalEmotional > 4) {
+            analysis.manipulationRisk = 'medium';
+        }
+
+        // Determine overall sentiment
+        if (angerScore > fearScore && angerScore > 2) {
+            analysis.sentiment = 'negative';
+        } else if (fearScore > 2) {
+            analysis.sentiment = 'fearful';
+        }
+
+        return analysis;
+    }
+
+    // Extract data useful for fact-checking
+    extractFactCheckingData() {
+        const data = {
+            numericalClaims: [],
+            namedEntities: [],
+            dates: [],
+            locations: [],
+            organizations: []
+        };
+
+        const text = document.body.textContent;
+
+        // Extract numerical claims
+        const numberPatterns = [
+            /\d+%/g,
+            /\$[\d,]+(?:\.\d{2})?(?:\s*(?:million|billion|trillion))?/gi,
+            /\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|trillion)/gi
+        ];
+
+        numberPatterns.forEach(pattern => {
+            const matches = text.match(pattern) || [];
+            data.numericalClaims.push(...matches.slice(0, 10));
+        });
+
+        // Extract dates
+        const datePatterns = [
+            /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/gi,
+            /\d{1,2}\/\d{1,2}\/\d{4}/g,
+            /\d{4}-\d{2}-\d{2}/g
+        ];
+
+        datePatterns.forEach(pattern => {
+            const matches = text.match(pattern) || [];
+            data.dates.push(...matches.slice(0, 5));
+        });
+
+        return data;
     }
 
     // Clear cache

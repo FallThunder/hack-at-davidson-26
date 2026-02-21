@@ -3,8 +3,8 @@
 # Chrome/Firefox Extension Build Script
 # This script helps package the extension for Chrome/Chromium and Firefox browsers
 
-echo "🚀 Smart Page Analyzer - Extension Builder"
-echo "=========================================="
+echo "🚀 Evident - Fact-Checking Extension Builder"
+echo "============================================="
 
 # Create build directory
 mkdir -p build

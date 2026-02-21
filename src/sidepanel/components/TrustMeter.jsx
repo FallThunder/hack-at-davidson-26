@@ -78,7 +78,7 @@ export function TrustMeter({ score, tier }) {
       >
         {tierLabel}
       </p>
-      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Trust Score</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Article Trust Score</p>
     </div>
   )
 }

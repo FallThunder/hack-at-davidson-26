@@ -325,17 +325,17 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
                 [JSON.stringify(finalMsg.parsed_output), url]);
         }).catch((e: unknown) => {
             logError(`[analyze] stream error (+${Date.now() - analyzeStart}ms)`, e);
-            const isOverloaded = e instanceof APIError && e.status === 529;
+            const isRetriable = e instanceof APIError && (e.status === 529 || e.status === 429);
             db.run('UPDATE analysis_cache SET waiting = 0, error = ? WHERE url = ?',
-                [isOverloaded ? 'overloaded' : 'failed', url]);
+                [isRetriable ? 'overloaded' : 'failed', url]);
         });
 
         return Response.json({ ready: false, data: null }, noCache);
     } catch (e: unknown) {
         logError('[analyze] outer catch', e);
-        const isOverloaded = e instanceof APIError && e.status === 529;
+        const isRetriable = e instanceof APIError && (e.status === 529 || e.status === 429);
         db.run('UPDATE analysis_cache SET waiting = 0, error = ? WHERE url = ?',
-            [isOverloaded ? 'overloaded' : 'failed', url]);
+            [isRetriable ? 'overloaded' : 'failed', url]);
         return Response.json({}, { status: 400, headers: CORS_HEADERS });
     }
 }

@@ -10,6 +10,8 @@ import { SkeletonCard, SkeletonSiteProfile, SkeletonFlagCard } from './component
 import { FlagCard } from './components/FlagCard.jsx'
 import { HighlightToggle } from './components/HighlightToggle.jsx'
 
+const OPINION_CATEGORIES = new Set(['Opinion', 'Editorial', 'Commentary'])
+
 const STATUS_MESSAGES = [
   'Reading article...',
   'Analyzing article...',
@@ -271,11 +273,38 @@ export function App() {
             </div>
           )}
 
-          {/* Site Profile — skeleton while publisher data loads */}
+          {/* Publisher — skeleton while publisher data loads */}
+          {(siteProfile || isAnalyzing) && (
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-0.5">
+              Publisher
+            </p>
+          )}
           {siteProfile
             ? <SiteProfile {...siteProfile} />
             : isAnalyzing && <SkeletonSiteProfile />
           }
+
+          {/* Article category + opinion warning — appears after full analysis */}
+          {siteProfile?.article_category && (
+            <>
+              <div className="flex items-center gap-2 px-0.5">
+                <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Article</span>
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                  {siteProfile.article_category}
+                </span>
+              </div>
+              {OPINION_CATEGORIES.has(siteProfile.article_category) && (
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2 flex items-start gap-2">
+                  <svg className="shrink-0 w-3.5 h-3.5 mt-0.5 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                    {siteProfile.article_category} — statements reflect the author's views and may not represent factual reporting.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
 
           {/* 6 Dimension Cards */}
           {hasDimensions && (isAnalyzing || Object.keys(dimensions).length > 0) && (

@@ -188,6 +188,7 @@ export function useAnalysis() {
       })
 
     // Poll /analyze until ready
+    // Returns true if polling should continue, false if done (success or terminal error)
     const poll = async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/analyze?url=${encodeURIComponent(url)}`, {
@@ -196,7 +197,7 @@ export function useAnalysis() {
           cache: 'no-store',
           body: JSON.stringify({ url, text: article.text, headline: article.headline })
         })
-        if (runIdRef.current !== runId) return  // stale — discard before even parsing
+        if (runIdRef.current !== runId) return false  // stale — discard before even parsing
 
         if (!res.ok) {
           clearInterval(pollIntervalRef.current)
@@ -204,16 +205,16 @@ export function useAnalysis() {
           clearTimeout(slowTimeoutRef.current)
           slowTimeoutRef.current = null
           dispatch({ type: 'ERROR', payload: 'The server returned an error. Please try again.' })
-          return
+          return false
         }
 
         const data = await res.json()
-        if (runIdRef.current !== runId) return  // stale — discard after parsing
+        if (runIdRef.current !== runId) return false  // stale — discard after parsing
 
         if (data.error === 'overloaded') {
           // Claude is overloaded — backend will retry on next poll automatically
           dispatch({ type: 'OVERLOADED_WARNING' })
-          return
+          return true
         }
 
         if (!data.ready && data.progress) {
@@ -226,7 +227,7 @@ export function useAnalysis() {
           clearTimeout(slowTimeoutRef.current)
           slowTimeoutRef.current = null
           dispatch({ type: 'ERROR', payload: 'The server could not analyze this article. Please try again.' })
-          return
+          return false
         }
 
         if (data.ready && data.data) {
@@ -253,16 +254,18 @@ export function useAnalysis() {
 
           // Cache result so switching back to this tab skips the API call
           analysisCache.set(url, { siteProfile: mergedSiteProfile, flags, trustScore })
+          return false
         }
       } catch {
         // Continue polling on network error
       }
+      return true
     }
 
-    // Run immediately, then on interval
-    await poll()
+    // Run immediately; only set up interval if still waiting for results
+    const shouldContinue = await poll()
     if (runIdRef.current !== runId) return  // superseded during first poll
-    pollIntervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
+    if (shouldContinue) pollIntervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
   }, [])
 
   return { ...state, startAnalysis }

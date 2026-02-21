@@ -49,6 +49,20 @@ const output_schema = z.object({
 
 const anthropic = new Anthropic();
 
+function log(...args: unknown[]): void {
+    console.log(new Date().toISOString(), ...args);
+}
+
+function logError(prefix: string, e: unknown): void {
+    if (e instanceof APIError) {
+        console.error(new Date().toISOString(), `${prefix} APIError status=${e.status} type=${(e.error as { type?: string })?.type ?? 'unknown'} message=${e.message}`);
+    } else if (e instanceof Error) {
+        console.error(new Date().toISOString(), `${prefix} Error name=${e.name} message=${e.message}`);
+    } else {
+        console.error(new Date().toISOString(), `${prefix} unknown error:`, e);
+    }
+}
+
 const db = new Database('cache.db');
 
 db.run(`CREATE TABLE IF NOT EXISTS publisher_cache (
@@ -92,11 +106,13 @@ async function publisher(url: string): Promise<Response> {
             'SELECT content FROM publisher_cache WHERE url = ?'
         ).get(url);
         if (cached) {
+            log(`[publisher] cache hit → ${url}`);
             return Response.json({ ready: true, data: JSON.parse(cached.content) }, yesCache);
         }
 
         let finalMsg;
         try {
+            const start = Date.now();
             const msg = anthropic.messages.stream({
                 model: "claude-haiku-4-5",
                 tools: [{
@@ -123,19 +139,20 @@ async function publisher(url: string): Promise<Response> {
                 },
                 max_tokens: 500
             });
-            console.log(`[publisher] started → ${url}`);
+            log(`[publisher] stream started → ${url}`);
             let publisherTextStarted = false;
             msg.on('text', (textDelta: string) => {
                 if (!publisherTextStarted) {
                     publisherTextStarted = true;
-                    console.log(`[publisher] generating response`);
+                    log(`[publisher] generating response`);
                 }
                 process.stdout.write(textDelta);
             });
             finalMsg = await msg.finalMessage();
             process.stdout.write('\n');
+            log(`[publisher] done in ${Date.now() - start}ms — in:${finalMsg.usage.input_tokens} out:${finalMsg.usage.output_tokens} tokens → ${url}`);
         } catch (e: unknown) {
-            console.error(e);
+            logError('[publisher]', e);
             return Response.json({ ready: true, data: null }, noCache);
         }
 
@@ -145,7 +162,7 @@ async function publisher(url: string): Promise<Response> {
 
         return Response.json({ ready: true, data: output }, yesCache);
     } catch (e: unknown) {
-        console.error(e);
+        logError('[publisher] outer catch', e);
         return Response.json({}, { status: 400, headers: CORS_HEADERS });
     }
 }
@@ -158,16 +175,19 @@ async function analyze(url: string, text: string): Promise<Response> {
 
         if (cached) {
             if (cached.waiting) {
+                log(`[analyze] poll — waiting, progress="${cached.progress}" → ${url}`);
                 return Response.json({ ready: false, data: null, progress: cached.progress }, noCache);
             }
             if (cached.error === 'overloaded') {
-                // Delete row so the next poll triggers a fresh attempt
+                log(`[analyze] poll — overloaded, deleting row for retry → ${url}`);
                 db.run('DELETE FROM analysis_cache WHERE url = ?', [url]);
                 return Response.json({ ready: false, data: null, error: 'overloaded' }, noCache);
             }
             if (cached.error === 'failed') {
+                log(`[analyze] poll — permanent failure → ${url}`);
                 return Response.json({ ready: true, data: null, error: 'failed' }, noCache);
             }
+            log(`[analyze] cache hit → ${url}`);
             return Response.json({ ready: true, data: cached.content ? JSON.parse(cached.content) : null }, yesCache);
         }
 
@@ -178,13 +198,17 @@ async function analyze(url: string, text: string): Promise<Response> {
         );
         if (inserted.changes === 0) {
             // Another concurrent request already started analysis
+            log(`[analyze] race — another request claimed ${url}, returning not-ready`);
             return Response.json({ ready: false, data: null }, noCache);
         }
 
+        log(`[analyze] new request — text length=${text.length} chars → ${url}`);
+
         // Start the stream — not awaited (fire and forget). If stream init throws
         // synchronously, the outer catch handles cleanup.
+        const analyzeStart = Date.now();
         const msg = anthropic.messages.stream({
-            model: "claude-opus-4-6",
+            model: "claude-sonnet-4-6",
             tools: [{
                 type: "web_search_20250305",
                 name: "web_search",
@@ -261,7 +285,7 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
         msg.on('text', (textDelta: string) => {
             if (!analyzeTextStarted) {
                 analyzeTextStarted = true;
-                console.log(`[analyze] generating response for ${url}`);
+                log(`[analyze] text streaming started (+${Date.now() - analyzeStart}ms) → ${url}`);
                 db.run('UPDATE analysis_cache SET progress = ? WHERE url = ?', ['Analyzing article...', url]);
             }
             process.stdout.write(textDelta);
@@ -270,14 +294,17 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
         // finalMessage() is not awaited — returns immediately so we can respond with ready:false
         const finalMsgPromise = msg.finalMessage();
 
-        console.log('started analysis for ' + url);
+        log(`[analyze] stream open, returning not-ready → ${url}`);
 
-        (finalMsgPromise as Promise<{ parsed_output: z.infer<typeof output_schema> }>).then((finalMsg) => {
+        (finalMsgPromise as Promise<{ parsed_output: z.infer<typeof output_schema>; usage: { input_tokens: number; output_tokens: number } }>).then((finalMsg) => {
+            const flags = finalMsg.parsed_output.content_analysis.flags;
+            const elapsed = Date.now() - analyzeStart;
+            log(`[analyze] done in ${elapsed}ms — flags=${flags.length} in:${finalMsg.usage.input_tokens} out:${finalMsg.usage.output_tokens} tokens → ${url}`);
+            process.stdout.write('\n');
             db.run('UPDATE analysis_cache SET waiting = 0, content = ? WHERE url = ?',
                 [JSON.stringify(finalMsg.parsed_output), url]);
-            console.log('completed analysis for ' + url);
         }).catch((e: unknown) => {
-            console.error(e);
+            logError(`[analyze] stream error (+${Date.now() - analyzeStart}ms)`, e);
             const isOverloaded = e instanceof APIError && e.status === 529;
             db.run('UPDATE analysis_cache SET waiting = 0, error = ? WHERE url = ?',
                 [isOverloaded ? 'overloaded' : 'failed', url]);
@@ -285,7 +312,7 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 
         return Response.json({ ready: false, data: null }, noCache);
     } catch (e: unknown) {
-        console.error('fail!', e);
+        logError('[analyze] outer catch', e);
         const isOverloaded = e instanceof APIError && e.status === 529;
         db.run('UPDATE analysis_cache SET waiting = 0, error = ? WHERE url = ?',
             [isOverloaded ? 'overloaded' : 'failed', url]);
@@ -296,25 +323,25 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 const server = Bun.serve({
     routes: {
         "/publisher": async (req: Request) => {
-            if (req.method === 'OPTIONS') {
-                return new Response(null, { status: 204, headers: CORS_HEADERS });
-            }
+            if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
             const reqUrl = new URL(req.url);
             const analyzeUrl = reqUrl.searchParams.get("url");
             if (!analyzeUrl) {
+                log(`[request] GET /publisher — missing url param`);
                 return new Response("no url provided", { status: 400, headers: CORS_HEADERS });
             }
+            log(`[request] GET /publisher → ${analyzeUrl}`);
             return await publisher(analyzeUrl);
         },
         "/analyze": async (req: Request) => {
-            if (req.method === 'OPTIONS') {
-                return new Response(null, { status: 204, headers: CORS_HEADERS });
-            }
+            if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
             const reqUrl = new URL(req.url);
             const analyzeUrl = reqUrl.searchParams.get("url");
             if (!analyzeUrl) {
+                log(`[request] POST /analyze — missing url param`);
                 return new Response("no url provided", { status: 400, headers: CORS_HEADERS });
             }
+            log(`[request] POST /analyze → ${analyzeUrl}`);
             return await analyze(analyzeUrl, (await req.text()));
         }
     }

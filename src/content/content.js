@@ -236,7 +236,7 @@ function findBestSegment(textMap, excerpt, threshold = 0.5) {
   const segments = excerpt
     .split(/…|\.\.\./)
     .map(s => s.trim())
-    .filter(s => tokenize(s).words.length >= 3)
+    .filter(s => tokenize(s).words.length >= 2)
 
   if (segments.length === 0) return null
   if (segments.length === 1) return findSimilarText(textMap, segments[0], threshold)
@@ -272,13 +272,17 @@ const URGENCY_BORDER = {
 // For cross-node ranges, each text node fragment gets its own span via
 // surroundContents — avoids the block-in-inline problem that extractContents
 // causes when container elements (DIV, P, etc.) end up inside the span.
+//
+// IMPORTANT: textMap is rebuilt before each flag because surroundContents
+// splits text nodes — stale node references from a pre-mutation map produce
+// out-of-bounds offsets that throw (and get silently caught) for later flags.
 function applyHighlights(highlights) {
   evidentFlags = highlights
-  const textMap = buildTextMap(document.body)
 
   highlights.forEach((flag, index) => {
     if (!flag.excerpt) return
 
+    const textMap = buildTextMap(document.body)
     const match = findBestSegment(textMap, flag.excerpt)
     if (!match) return
 

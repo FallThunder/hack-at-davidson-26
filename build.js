@@ -113,6 +113,13 @@ console.log('✔ Service worker built')
 // ─── 4. Copy static assets to dist root ──────────────────────────────────────
 copyFileSync(resolve(root, 'public/manifest.json'), resolve(root, 'dist/manifest.json'))
 copyDir(resolve(root, 'public/icons'), resolve(root, 'dist/icons'))
+// Use nobg logo for extension icons (toolbar, etc.)
+const nobgPath = resolve(root, 'public/evident-nobg.png')
+if (existsSync(nobgPath)) {
+  for (const size of [16, 48, 128]) {
+    copyFileSync(nobgPath, resolve(root, 'dist/icons', `icon${size}.png`))
+  }
+}
 
 // ─── 5. Fix sidepanel index.html location ─────────────────────────────────────
 // Vite outputs HTML relative to project root, so it lands at dist/src/sidepanel/index.html.

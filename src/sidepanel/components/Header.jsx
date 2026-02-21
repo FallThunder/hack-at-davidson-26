@@ -1,4 +1,4 @@
-import logoUrl from '../../../public/logo.png'
+import logoUrl from '../../../public/evident-nobg.png'
 
 export function Header({ darkMode, onToggleDarkMode }) {
   return (

@@ -105,9 +105,9 @@ export function useAnalysis() {
     const article = articleData ?? { headline: '', url: '', text: '', sentences: [] }
     dispatch({ type: 'ARTICLE_RECEIVED', payload: article })
 
-    // Check if the current URL exactly matches one of our example articles
-    const mock = MOCK_BY_URL[article.url]
-    if (!mock) {
+    // Use mock for this URL or fall back to first available mock so we can test (e.g. toolbar icon)
+    const mock = MOCK_BY_URL[article.url] ?? Object.values(MOCK_BY_URL)[0]
+    if (!mock?.dimensions?.length) {
       dispatch({ type: 'UNSUPPORTED' })
       return
     }

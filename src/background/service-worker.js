@@ -18,6 +18,18 @@ chrome.action.onClicked.addListener(async (tab) => {
   await chrome.sidePanel.open({ tabId: tab.id })
 })
 
+// Detect side panel close via long-lived port and clear highlights
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'sidepanel') return
+  port.onDisconnect.addListener(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0]
+      if (!tab?.id) return
+      chrome.tabs.sendMessage(tab.id, { type: 'CLEAR_HIGHLIGHTS' }).catch(() => {})
+    })
+  })
+})
+
 // Relay messages: side panel sends { target: 'content', ...rest }
 // Service worker finds the active tab and forwards to its content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

@@ -40,6 +40,13 @@ export function App() {
     chrome.runtime.sendMessage({ type: 'SET_DARK_MODE', dark: darkMode, target: 'content' })
   }, [darkMode])
 
+  // Open a long-lived port so the service worker can detect when the panel closes
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.runtime) return
+    const port = chrome.runtime.connect({ name: 'sidepanel' })
+    return () => port.disconnect()
+  }, [])
+
   // Auto-start analysis on mount
   useEffect(() => {
     startAnalysis()
@@ -81,6 +88,22 @@ export function App() {
             <p className="text-xs text-gray-400 dark:text-gray-500 truncate px-0.5" title={article.url}>
               {article.url}
             </p>
+          )}
+
+          {/* Unsupported page */}
+          {status === 'unsupported' && (
+            <div className="flex flex-col items-center justify-center text-center py-16 px-4 gap-3">
+              <svg className="w-10 h-10 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                No analysis available for this page.
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                Navigate to one of the supported articles to see Evident in action.
+              </p>
+            </div>
           )}
 
           {/* Extracting state */}
@@ -139,6 +162,7 @@ export function App() {
                       key={flag.originalIndex}
                       {...flag}
                       isActive={activeFlag === flag.originalIndex}
+                      onActivate={() => setActiveFlag(flag.originalIndex)}
                       onScrollToArticle={highlightsApplied ? () => scrollToFlag(flag.originalIndex) : undefined}
                     />
                   ))}

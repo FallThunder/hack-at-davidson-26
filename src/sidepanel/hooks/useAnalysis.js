@@ -1,8 +1,6 @@
 import { useReducer, useCallback, useRef } from 'react'
 import { computeTrustScore } from '../../utils/scoring.js'
-import { MOCK_SITE_PROFILE, MOCK_FLAGS, MOCK_DIMENSIONS } from '../mockData.js'
-
-const HAS_DIMENSIONS = MOCK_DIMENSIONS.length > 0
+import { MOCK_BY_URL } from '../mockData.js'
 
 const DIMENSION_ORDER = [
   'factCheck',
@@ -14,12 +12,13 @@ const DIMENSION_ORDER = [
 ]
 
 const initialState = {
-  status: 'idle',       // 'idle' | 'extracting' | 'analyzing' | 'complete'
+  status: 'idle',       // 'idle' | 'extracting' | 'analyzing' | 'unsupported' | 'complete'
   article: null,        // { headline, url }
   siteProfile: null,    // populated first
   dimensions: {},       // filled one by one
   flags: [],            // populated after last dimension
   trustScore: null,     // { score, tier } — computed when all 6 arrive
+  hasDimensions: false, // true once we confirm a valid mock exists for this URL
   error: null
 }
 
@@ -32,7 +31,10 @@ function reducer(state, action) {
       return { ...state, article: action.payload }
 
     case 'START_ANALYZE':
-      return { ...state, status: 'analyzing' }
+      return { ...state, status: 'analyzing', hasDimensions: true }
+
+    case 'UNSUPPORTED':
+      return { ...state, status: 'unsupported' }
 
     case 'SITE_PROFILE_RECEIVED':
       return { ...state, siteProfile: action.payload }
@@ -98,12 +100,17 @@ export function useAnalysis() {
     dispatch({ type: 'RESET' })
     dispatch({ type: 'START_EXTRACT' })
 
-    // Try to get article data from the content script
+    // Get article data from the content script
     const articleData = await sendToContent({ type: 'GET_ARTICLE' })
-    dispatch({
-      type: 'ARTICLE_RECEIVED',
-      payload: articleData ?? { headline: 'Demo Article', url: 'https://example.com', text: '', sentences: [] }
-    })
+    const article = articleData ?? { headline: '', url: '', text: '', sentences: [] }
+    dispatch({ type: 'ARTICLE_RECEIVED', payload: article })
+
+    // Check if the current URL exactly matches one of our example articles
+    const mock = MOCK_BY_URL[article.url]
+    if (!mock) {
+      dispatch({ type: 'UNSUPPORTED' })
+      return
+    }
 
     dispatch({ type: 'START_ANALYZE' })
 
@@ -114,20 +121,20 @@ export function useAnalysis() {
 
     // Simulate streaming: site profile arrives first
     schedule(() => {
-      dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: MOCK_SITE_PROFILE })
+      dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: mock.siteProfile })
     }, 400)
 
     // Dimensions stream in one by one
-    MOCK_DIMENSIONS.forEach((dimension, index) => {
+    mock.dimensions.forEach((dimension, index) => {
       schedule(() => {
         dispatch({ type: 'DIMENSION_RECEIVED', payload: dimension })
       }, 800 + index * 700)
     })
 
     // Flags arrive after the last dimension
-    const totalDelay = 800 + (MOCK_DIMENSIONS.length - 1) * 700 + 300
+    const totalDelay = 800 + (mock.dimensions.length - 1) * 700 + 300
     schedule(() => {
-      dispatch({ type: 'FLAGS_RECEIVED', payload: MOCK_FLAGS })
+      dispatch({ type: 'FLAGS_RECEIVED', payload: mock.flags })
     }, totalDelay)
 
     // Mark complete
@@ -136,5 +143,5 @@ export function useAnalysis() {
     }, totalDelay + 100)
   }, [])
 
-  return { ...state, startAnalysis, hasDimensions: HAS_DIMENSIONS }
+  return { ...state, startAnalysis }
 }

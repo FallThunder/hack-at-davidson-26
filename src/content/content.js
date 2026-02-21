@@ -352,6 +352,16 @@ function clearHighlights() {
     parent.removeChild(span)
   })
   evidentFlags = []
+  if (tooltipEl) {
+    tooltipEl.remove()
+    tooltipEl = null
+  }
+  if (popover) {
+    document.removeEventListener('click', handleDocumentClick, true)
+    popover.remove()
+    popover = null
+    popoverOpen = false
+  }
 }
 
 // Message listener

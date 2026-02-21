@@ -16,7 +16,7 @@ const URGENCY_DOT_COLORS = {
   5: 'bg-red-600'
 }
 
-export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, sources = [], isActive = false, onScrollToArticle }) {
+export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, sources = [], isActive = false, onScrollToArticle, onActivate }) {
   const [expanded, setExpanded] = useState(false)
   const cardRef = useRef(null)
 
@@ -40,6 +40,7 @@ export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, source
         cardStyle,
         isActive ? 'ring-2 ring-indigo-400 dark:ring-indigo-500 shadow-md' : ''
       ].join(' ')}
+      onClick={onActivate}
     >
       {/* Header: urgency dot, flag type, confidence */}
       <div className="flex items-start justify-between gap-2 mb-2">

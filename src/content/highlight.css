@@ -1,40 +1,9 @@
 /* Evident highlight styles — injected into every page */
 
-/* Ambient shine: the ::before pseudo-element fades in, holds, then fades out.
-   Each span gets its own --evident-delay and --evident-duration via JS so they
-   never pulse in sync — the effect feels like light occasionally catching a surface. */
-@keyframes evident-shine {
-  0%   { opacity: 0; }   /* dark */
-  8%   { opacity: 0; }   /* brief pause before rising */
-  22%  { opacity: 1; }   /* fade in */
-  40%  { opacity: 0.9; } /* hold */
-  55%  { opacity: 0; }   /* fade out */
-  100% { opacity: 0; }   /* stay dark until next cycle */
-}
-
 .evident-highlight {
-  position: relative;
   border-radius: 2px;
   cursor: pointer;
   transition: filter 0.15s ease;
-}
-
-/* Soft radial glow, offset slightly to suggest an angled light source */
-.evident-highlight::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 85% 130% at 62% 38%,
-    rgba(255, 255, 255, 0.52) 0%,
-    rgba(215, 232, 252, 0.26) 42%,
-    transparent 68%
-  );
-  opacity: 0;
-  animation: evident-shine var(--evident-duration, 9s) ease-in-out infinite;
-  animation-delay: var(--evident-delay, 0s);
 }
 
 .evident-highlight:hover {
@@ -111,15 +80,15 @@
   border-top-color: #ffffff;
 }
 
-/* Tooltip — dark mode */
-[data-evident-dark] .evident-tooltip {
+/* Tooltip — dark mode (attribute set directly on tooltip element in showTooltip()) */
+.evident-tooltip[data-evident-dark] {
   background: #1a1a1a;
   color: #ffffff;
   border: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-[data-evident-dark] .evident-tooltip::after {
+.evident-tooltip[data-evident-dark]::after {
   border-top-color: #1a1a1a;
 }
 
@@ -128,7 +97,6 @@
 /* Reduced motion: disable all transitions and animations */
 @media (prefers-reduced-motion: reduce) {
   .evident-highlight        { transition: none !important; }
-  .evident-highlight::before { animation: none !important; }
   .evident-highlight-pulse  { animation: none !important; }
   .evident-tooltip          { transition: none !important; }
 }

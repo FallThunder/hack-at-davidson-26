@@ -31,6 +31,7 @@ function getTooltipEl() {
 
 function showTooltip(text, anchorRect) {
   const el = getTooltipEl()
+  el.toggleAttribute('data-evident-dark', document.documentElement.hasAttribute('data-evident-dark'))
   el.textContent = text
   // Move off-screen to measure, then position
   el.style.left = '-9999px'
@@ -283,9 +284,6 @@ function applyHighlights(highlights) {
       span.setAttribute('data-evident-flag-index', String(index))
       span.style.setProperty('background-color', URGENCY_BG[u], 'important')
       span.style.setProperty('border-bottom', URGENCY_BORDER[u], 'important')
-      // Randomize the shine timing per span so elements never pulse in sync
-      span.style.setProperty('--evident-delay', `${(Math.random() * 8).toFixed(2)}s`)
-      span.style.setProperty('--evident-duration', `${(6 + Math.random() * 6).toFixed(2)}s`)
       span.addEventListener('mouseenter', () => showTooltip(tooltipText, span.getBoundingClientRect()))
       span.addEventListener('mouseleave', hideTooltip)
       span.addEventListener('click', (event) => {

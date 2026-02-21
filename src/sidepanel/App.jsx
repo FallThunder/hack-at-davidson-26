@@ -18,20 +18,32 @@ const DIMENSION_ORDER = [
   'emotionalArc'
 ]
 
+const DARK_MODE_STORAGE_KEY = 'evident-dark-mode'
+
+function getInitialDarkMode() {
+  try {
+    const stored = localStorage.getItem(DARK_MODE_STORAGE_KEY)
+    if (stored === 'true') return true
+    if (stored === 'false') return false
+  } catch (_) {}
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
 export function App() {
-  // Dark mode: default to system preference, allow manual override
-  const [darkMode, setDarkMode] = useState(
-    () => window.matchMedia('(prefers-color-scheme: dark)').matches
-  )
+  // Dark mode: persisted in localStorage, fallback to system preference
+  const [darkMode, setDarkMode] = useState(getInitialDarkMode)
   // Original-array index of the flag that was clicked in the article
   const [activeFlag, setActiveFlag] = useState(null)
 
   const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags)
 
-  // Sync dark mode class to side panel <html>
+  // Sync dark mode class to side panel <html> and persist to localStorage
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
+    try {
+      localStorage.setItem(DARK_MODE_STORAGE_KEY, darkMode ? 'true' : 'false')
+    } catch (_) {}
   }, [darkMode])
 
   // Sync dark mode to article page tooltips/popover

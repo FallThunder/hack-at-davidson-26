@@ -56,21 +56,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Toolbar icon by trust score (side panel → background)
   if (message.type === 'SET_ICON_BY_SCORE') {
-    const tier = message.tier === 'high' ? 'green' : message.tier === 'low' ? 'red' : 'yellow'
-    const path = { 16: `icons/icon16-${tier}.png`, 48: `icons/icon48-${tier}.png` }
-    const tabId = message.tabId
-    const doSet = (id) => {
-      if (id) {
-        chrome.action.setIcon({ tabId: id, path }).catch((err) => {
-          console.error('Evident setIcon failed', err)
-        })
+    const color = message.tier === 'high' ? 'green' : message.tier === 'low' ? 'red' : 'yellow'
+
+    async function loadImageData(size) {
+      const url = chrome.runtime.getURL(`icons/icon${size}-${color}.png`)
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const bitmap = await createImageBitmap(blob)
+      const canvas = new OffscreenCanvas(size, size)
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, size, size)
+      return canvas.getContext('2d').getImageData(0, 0, size, size)
+    }
+
+    async function doSet(tabId) {
+      try {
+        const [img16, img48] = await Promise.all([loadImageData(16), loadImageData(48)])
+        const opts = { imageData: { 16: img16, 48: img48 } }
+        if (tabId != null) opts.tabId = tabId
+        await chrome.action.setIcon(opts)
+      } catch (err) {
+        console.error('Evident setIcon failed', err)
       }
       sendResponse({ ok: true })
     }
-    if (tabId != null) {
-      doSet(tabId)
+
+    if (message.tabId != null) {
+      doSet(message.tabId)
     } else {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => { doSet(tabs[0]?.id) })
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => doSet(tabs[0]?.id))
     }
     return true
   }

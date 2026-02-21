@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from 'zod';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+import { Database } from 'bun:sqlite';
 
 // PUBLIC ENDPOINT:
 // https://factcheck.coredoes.dev
@@ -48,8 +49,15 @@ const output_schema = z.object({
 
 const anthropic = new Anthropic();
 
-const database: Record<URL, object | null> = {};
-const database2: Record<URL, object | null> = {};
+interface Output {
+	waiting: boolean;
+	content: object | null;
+}
+interface SiteEntry {
+	publisher: Output | undefined,
+	analysis: Output | undefined
+}
+const database: Record<string, SiteEntry> = {};
 
 interface Response {
     ready: boolean;
@@ -67,19 +75,14 @@ function corsJson(data: object, status = 200) {
 }
 
 async function publisher(url: string): Response {
-    if (Object.keys(database2).includes(url)) {
-	const existing = database2[url];
-	if (existing === null) {
-	    return corsJson({
-		ready: false,
-		data: null
-	    }, noCache);
-	} else {
-	    return corsJson({
-		ready: true,
-		data: existing
-	    }, yesCache);
-	}
+    if (Object.keys(database).includes(url)) {
+	    const entry = database[url];
+	    if (entry.publisher && entry.publisher.content && !entry.publisher.waiting) {
+		    return Response.json({
+			    ready: true,
+			    data: entry.publisher.content
+		    }, yesCache);
+	    }
     }
     const msg = await anthropic.messages.stream({
 	model: "claude-haiku-4-5",
@@ -109,10 +112,15 @@ async function publisher(url: string): Response {
     });
     const finalMsg = await msg.finalMessage();
     const output = finalMsg.parsed_output;
-    database2[url] = output;
-    console.log(output);
-    console.log(finalMsg);
-    return corsJson({
+
+    database[url] = {
+	    publisher: {
+		    ready: true,
+		    content: output
+	    }
+    };
+
+    return Response.json({
 	ready: true,
 	data: output
     }, yesCache);
@@ -131,25 +139,24 @@ const yesCache = {
 };
 
 async function analyze(url: string): Response {
-    console.log(database);
-    console.log(url);
     if (Object.keys(database).includes(url)) {
-	const existing = database[url];
-	console.log(existing);
-	if (existing === null) {
-	    return corsJson({
-		ready: false,
-		data: null
-	    }, noCache);
-	} else {
-	    return corsJson({
-		ready: true,
-		data: existing
-	    }, yesCache);
-	}
+	    const entry = database[url];
+	    if (entry.analysis) {
+		    if (entry.analysis.waiting) {
+			    return Response.json({
+				    ready: false,
+				    data: null
+			    }, noCache);
+		    } else if (entry.analysis.content) {
+			    return Response.json({
+				    ready: true,
+				    data: entry.analysis.content
+			    }, yesCache);
+		    }
+	    }
     }
     const msg = anthropic.messages.stream({
-	model: "claude-haiku-4-5",
+	model: "claude-opus-4-6",
 	tools: [{
 	      type: "web_search_20250305",
 	      name: "web_search",
@@ -181,8 +188,6 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
     ### Confidence
     - Use confidence to reflect how certain you are that this is a genuine issue, not legitimate editorial judgement
     - For clear factual errors with strong counter-source: 0.85-0.99
-    - Do not flag something you are less than 55% confident is a problem
-    - If an article is well-written and well-researched, it's okay not to flag anything, but you should be very critical of articles that are inherently unreliable or published by historically unreliable sources
 
     ### Excerpts
     - Quote verbatim from the article, do NOT truncate or add ellipsis. It must be an EXACT TEXTUAL MATCH to the problematic sections
@@ -198,13 +203,12 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
     - Apply the same scrutiny regardless of the article's political leaning
     - Do not flag something as misleading simply because it expresses a conservative or liberal viewpoint
     - Only flag claims that are factually wrong, verifiably unsupported, or rhetorically deceptive in a way that would mislead a reasonable reader
-    - Opinion and editorializing are not themselves issues -- only flag when rhetoric substitutes for or actively contradicts verifiable fact.
+    - Opinion and editorializing are not themselves issues -- only flag when rhetoric substitutes for or actively contradicts verifiable fact, or could be confusing to the average reader.
     - Do not let these rules affect your ratings - be critical.
-    - If possible, retrieve your overall ratings from Ad Fontes or Media Bias / Fact Check.
 
     Overall Tone and Overall Factuality should be single-word ratings.
 
-    You only have a limited number of web searches; use them conservatively but as needed.
+	    You should be VERY critical of sites with anything lower than a 'Factual' rating according to Media Bias/ Fact Check.
 `,
 	messages: [
 	    {
@@ -215,17 +219,26 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 	output_config: {
 	    format: zodOutputFormat(output_schema)
 	},
-	max_tokens: 2000
+	max_tokens: 4000
     });
     const finalMsg = msg.finalMessage();
-    console.log(msg);
-    database[url] = null;
+    console.log('started analysis for ' + url);
+    database[url] = {
+	    analysis: {
+		    waiting: true,
+		    content: null
+	    }
+    };
     finalMsg.then(msg => {
-	database[url] = msg.parsed_output;
+	database[url] = {
+		analysis: {
+			waiting: false,
+			content: msg.parsed_output
+		}
+	};
 	console.log('completed analysis for ' + url);
-	console.log(database);
     });
-    return corsJson({
+    return Response.json({
 	ready: false,
 	data: null
     }, noCache);

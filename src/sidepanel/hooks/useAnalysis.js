@@ -1,20 +1,22 @@
 import { useReducer, useCallback, useRef } from 'react'
 import { computeTrustScoreFromFlags } from '../../utils/scoring.js'
+import { isNewsDomain, extractHostname, getUserDomains } from '../../utils/newsDomains.js'
 
-const BACKEND_URL = 'https://factcheck.coredoes.dev'
+const BACKEND_URL = 'https://factcheck2.coredoes.dev'
 const POLL_INTERVAL_MS = 3000
 
 // Per-session cache keyed by URL — avoids redundant API calls when switching tabs
 const analysisCache = new Map()
 
 const initialState = {
-  status: 'idle',       // 'idle' | 'extracting' | 'analyzing' | 'unsupported' | 'complete'
-  article: null,        // { headline, url }
-  siteProfile: null,    // populated from /publisher, then updated with tone/factuality from /analyze
-  dimensions: {},       // unused for live API (no dimensions from backend)
-  flags: [],            // populated when /analyze completes
-  trustScore: null,     // { score, tier } — computed from flags
-  hasDimensions: false, // stays false for live API (no dimension cards shown)
+  status: 'idle',           // 'idle' | 'extracting' | 'analyzing' | 'unsupported' | 'complete'
+  article: null,            // { headline, url }
+  siteProfile: null,        // populated from /publisher, then updated with tone/factuality from /analyze
+  dimensions: {},           // unused for live API (no dimensions from backend)
+  flags: [],                // populated when /analyze completes
+  trustScore: null,         // { score, tier } — computed from flags
+  hasDimensions: false,     // stays false for live API (no dimension cards shown)
+  unsupportedDomain: null,  // hostname when page is real but not in the news allowlist
   error: null
 }
 
@@ -30,7 +32,7 @@ function reducer(state, action) {
       return { ...state, status: 'analyzing', hasDimensions: false }
 
     case 'UNSUPPORTED':
-      return { ...state, status: 'unsupported' }
+      return { ...state, status: 'unsupported', unsupportedDomain: action.payload?.domain ?? null }
 
     case 'SITE_PROFILE_RECEIVED':
       return { ...state, siteProfile: action.payload }
@@ -79,6 +81,9 @@ export function useAnalysis() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const pollIntervalRef = useRef(null)
   const publisherDataRef = useRef(null)
+  // Incremented on every startAnalysis call; async callbacks check this before dispatching
+  // to discard results from a previous run that arrived late (stale fetch race condition).
+  const runIdRef = useRef(0)
 
   const startAnalysis = useCallback(async (useCache = false) => {
     // Cancel any in-flight poll interval from a previous run
@@ -88,11 +93,16 @@ export function useAnalysis() {
     }
     publisherDataRef.current = null
 
+    // Stamp this run — any async callback that sees a different runId is stale and must exit
+    const runId = ++runIdRef.current
+
     dispatch({ type: 'RESET' })
     dispatch({ type: 'START_EXTRACT' })
 
     // Get article data from the content script
     const articleData = await sendToContent({ type: 'GET_ARTICLE' })
+    if (runIdRef.current !== runId) return  // superseded while waiting for content script
+
     const article = articleData ?? { headline: '', url: '', text: '', sentences: [] }
     dispatch({ type: 'ARTICLE_RECEIVED', payload: article })
 
@@ -100,6 +110,15 @@ export function useAnalysis() {
     const url = article.url ?? ''
     if (!url || url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:')) {
       dispatch({ type: 'UNSUPPORTED' })
+      return
+    }
+
+    // Gate on news allowlist — check built-in list plus user-saved domains
+    const userDomains = await getUserDomains()
+    if (runIdRef.current !== runId) return  // superseded while reading storage
+
+    if (!isNewsDomain(url, userDomains)) {
+      dispatch({ type: 'UNSUPPORTED', payload: { domain: extractHostname(url) } })
       return
     }
 
@@ -118,9 +137,10 @@ export function useAnalysis() {
     dispatch({ type: 'START_ANALYZE' })
 
     // Fetch publisher data immediately (fast, cached by backend)
-    fetch(`${BACKEND_URL}/publisher?url=${encodeURIComponent(url)}`)
+    fetch(`${BACKEND_URL}/publisher?url=${encodeURIComponent(url)}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
+        if (runIdRef.current !== runId) return  // stale — a newer analysis is running
         if (data.ready && data.data) {
           publisherDataRef.current = data.data
           dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: data.data })
@@ -133,8 +153,11 @@ export function useAnalysis() {
     // Poll /analyze until ready
     const poll = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/analyze?url=${encodeURIComponent(url)}`)
+        const res = await fetch(`${BACKEND_URL}/analyze?url=${encodeURIComponent(url)}`, { cache: 'no-store' })
+        if (runIdRef.current !== runId) return  // stale — discard before even parsing
+
         const data = await res.json()
+        if (runIdRef.current !== runId) return  // stale — discard after parsing
 
         if (data.ready && data.data) {
           clearInterval(pollIntervalRef.current)
@@ -148,7 +171,7 @@ export function useAnalysis() {
             overall_tone,
             overall_factuality
           }
-          const trustScore = computeTrustScoreFromFlags(flags)
+          const trustScore = computeTrustScoreFromFlags(flags, mergedSiteProfile)
 
           dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: mergedSiteProfile })
           dispatch({ type: 'FLAGS_RECEIVED', payload: flags })
@@ -165,6 +188,7 @@ export function useAnalysis() {
 
     // Run immediately, then on interval
     await poll()
+    if (runIdRef.current !== runId) return  // superseded during first poll
     pollIntervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
   }, [])
 

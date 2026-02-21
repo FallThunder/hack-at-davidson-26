@@ -173,10 +173,13 @@ function buildTextMap(root) {
   while ((node = walker.nextNode())) {
     const len = node.textContent.length
     if (len === 0) continue
+    // Insert a space between segments so word boundaries are preserved across
+    // inline elements (e.g. <a>, <strong>). Matches extractArticle's join(' ').
+    if (segments.length > 0) totalLength += 1
     segments.push({ node, start: totalLength, end: totalLength + len })
     totalLength += len
   }
-  return { segments, fullText: segments.map(s => s.node.textContent).join('') }
+  return { segments, fullText: segments.map(s => s.node.textContent).join(' ') }
 }
 
 function findNodeAtCharOffset(segments, charOffset) {
@@ -222,7 +225,7 @@ function findBestSegment(textMap, excerpt, threshold = 0.5) {
   const segments = excerpt
     .split(/…|\.\.\./)
     .map(s => s.trim())
-    .filter(s => s.split(/\s+/).filter(Boolean).length >= 3)
+    .filter(s => tokenize(s).words.length >= 3)
 
   if (segments.length === 0) return null
   if (segments.length === 1) return findSimilarText(textMap, segments[0], threshold)
@@ -333,11 +336,13 @@ function toggleHighlights(visible) {
 }
 
 function scrollToFlag(flagIndex) {
-  const span = document.querySelector(`[data-evident-flag-index="${flagIndex}"]`)
-  if (!span) return
-  span.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  span.classList.add('evident-highlight-pulse')
-  setTimeout(() => span.classList.remove('evident-highlight-pulse'), 1200)
+  const spans = document.querySelectorAll(`[data-evident-flag-index="${flagIndex}"]`)
+  if (!spans.length) return
+  spans[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
+  spans.forEach(span => {
+    span.classList.add('evident-highlight-pulse')
+    setTimeout(() => span.classList.remove('evident-highlight-pulse'), 1200)
+  })
 }
 
 function clearHighlights() {

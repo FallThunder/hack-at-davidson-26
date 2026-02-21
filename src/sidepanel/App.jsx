@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAnalysis } from './hooks/useAnalysis.js'
+import { saveUserDomain } from '../utils/newsDomains.js'
 import { useHighlights } from './hooks/useHighlights.js'
 import { Header } from './components/Header.jsx'
 import { SiteProfile } from './components/SiteProfile.jsx'
 import { TrustMeter } from './components/TrustMeter.jsx'
 import { DimensionCard } from './components/DimensionCard.jsx'
-import { SkeletonCard } from './components/SkeletonCard.jsx'
+import { SkeletonCard, SkeletonSiteProfile, SkeletonFlagCard } from './components/SkeletonCard.jsx'
 import { FlagCard } from './components/FlagCard.jsx'
 import { HighlightToggle } from './components/HighlightToggle.jsx'
 
@@ -35,7 +36,7 @@ export function App() {
   // Original-array index of the flag that was clicked in the article
   const [activeFlag, setActiveFlag] = useState(null)
 
-  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions } = useAnalysis()
+  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags)
 
   // Sync dark mode class to side panel <html> and persist to localStorage
@@ -105,6 +106,12 @@ export function App() {
     })
   }, [status, trustScore])
 
+  const handleAddDomain = useCallback(async () => {
+    if (!unsupportedDomain) return
+    await saveUserDomain(unsupportedDomain)
+    startAnalysis()
+  }, [unsupportedDomain, startAnalysis])
+
   const isAnalyzing = status === 'extracting' || status === 'analyzing'
 
   return (
@@ -128,12 +135,31 @@ export function App() {
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" />
               </svg>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                No analysis available for this page.
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-                Navigate to a news article to see Evident in action.
-              </p>
+              {unsupportedDomain ? (
+                <>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {unsupportedDomain} is not in your news sites list.
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                    Add it to analyze articles from this site.
+                  </p>
+                  <button
+                    onClick={handleAddDomain}
+                    className="mt-1 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white text-sm font-medium transition-colors duration-150"
+                  >
+                    Add {unsupportedDomain}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    No analysis available for this page.
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                    Navigate to a news article to see Evident in action.
+                  </p>
+                </>
+              )}
             </div>
           )}
 
@@ -148,18 +174,21 @@ export function App() {
             </div>
           )}
 
-          {/* Trust Meter — only after all 6 dimensions complete */}
+          {/* Trust Meter — skeleton while analyzing, real meter once score arrives */}
           {trustScore ? (
             <TrustMeter score={trustScore.score} tier={trustScore.tier} />
-          ) : hasDimensions && isAnalyzing && (
+          ) : isAnalyzing && (
             <div className="flex flex-col items-center py-5">
               <div className="w-36 h-36 rounded-full border-8 border-gray-200 dark:border-gray-700 animate-pulse" />
               <div className="mt-3 h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
             </div>
           )}
 
-          {/* Site Profile */}
-          {siteProfile && <SiteProfile {...siteProfile} />}
+          {/* Site Profile — skeleton while publisher data loads */}
+          {siteProfile
+            ? <SiteProfile {...siteProfile} />
+            : isAnalyzing && <SkeletonSiteProfile />
+          }
 
           {/* 6 Dimension Cards */}
           {hasDimensions && (isAnalyzing || Object.keys(dimensions).length > 0) && (
@@ -178,8 +207,8 @@ export function App() {
             </div>
           )}
 
-          {/* Fact Flags */}
-          {flags.length > 0 && (
+          {/* Fact Flags — skeleton while analyzing, real cards once flags arrive, empty state if none */}
+          {flags.length > 0 ? (
             <div>
               <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-0.5">
                 Fact Flags
@@ -197,6 +226,29 @@ export function App() {
                       onScrollToArticle={highlightsApplied ? () => scrollToFlag(flag.originalIndex) : undefined}
                     />
                   ))}
+              </div>
+            </div>
+          ) : status === 'complete' ? (
+            <div>
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-0.5">
+                Fact Flags
+              </p>
+              <div className="flex flex-col items-center py-5 text-center gap-2">
+                <svg className="w-8 h-8 text-green-400 dark:text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No significant issues found.</p>
+              </div>
+            </div>
+          ) : isAnalyzing && (
+            <div>
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-0.5">
+                Fact Flags
+              </p>
+              <div className="space-y-2.5">
+                <SkeletonFlagCard />
+                <SkeletonFlagCard />
+                <SkeletonFlagCard />
               </div>
             </div>
           )}

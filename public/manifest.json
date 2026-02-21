@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Evident",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Media bias and fact-checking overlay for news articles.",
   "icons": {
     "16": "icons/icon16.png",
@@ -30,7 +30,7 @@
       "run_at": "document_idle"
     }
   ],
-  "permissions": ["sidePanel", "activeTab", "scripting", "tabs"],
+  "permissions": ["sidePanel", "activeTab", "scripting", "tabs", "storage"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

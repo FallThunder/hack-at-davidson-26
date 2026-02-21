@@ -3,7 +3,7 @@ class ContentAnalyzer {
     constructor() {
         // Gemini AI API configuration
         this.apiKey = 'AIzaSyD05HamtdStA4CGTrPmAfxG4L-R3LfYJ68';
-        this.apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+        this.apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
         this.newsIndicators = {
             // Common news article selectors
             selectors: [
@@ -1088,52 +1088,80 @@ class ContentAnalyzer {
             throw new Error('Insufficient content for AI analysis');
         }
 
-        try {
-            const prompt = this.buildAnalysisPrompt(content, articleData);
-            
-            const requestBody = {
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.1,
-                    topK: 40,
-                    topP: 0.95,
-                    maxOutputTokens: 1024,
+        // Try different free model endpoints in order of preference
+        const modelEndpoints = [
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
+            'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
+        ];
+
+        for (let i = 0; i < modelEndpoints.length; i++) {
+            try {
+                const endpoint = modelEndpoints[i];
+                console.log(`Trying AI model endpoint ${i + 1}/${modelEndpoints.length}: ${endpoint}`);
+                
+                const prompt = this.buildAnalysisPrompt(content, articleData);
+                
+                const requestBody = {
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.1,
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: 1024,
+                    }
+                };
+
+                const response = await fetch(`${endpoint}?key=${this.apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.warn(`Model endpoint ${i + 1} failed:`, errorText);
+                    
+                    // If this is the last endpoint, throw the error
+                    if (i === modelEndpoints.length - 1) {
+                        throw new Error(`All AI endpoints failed. Last error: ${response.status} - ${errorText}`);
+                    }
+                    continue; // Try next endpoint
                 }
-            };
 
-            console.log('Sending AI analysis request...');
-            const response = await fetch(`${this.apiEndpoint}?key=${this.apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody)
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('AI API error response:', errorText);
-                throw new Error(`AI API request failed: ${response.status} - ${errorText}`);
+                const data = await response.json();
+                console.log('AI API response received:', data);
+                
+                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                    console.warn('Invalid AI response structure, trying next endpoint');
+                    if (i === modelEndpoints.length - 1) {
+                        throw new Error('Invalid AI response structure from all endpoints');
+                    }
+                    continue;
+                }
+                
+                const aiResponse = data.candidates[0].content.parts[0].text;
+                console.log('AI response text:', aiResponse);
+                
+                // Successfully got a response, update the working endpoint for future use
+                this.apiEndpoint = endpoint;
+                
+                return this.parseAIResponse(aiResponse);
+                
+            } catch (error) {
+                console.error(`AI analysis error with endpoint ${i + 1}:`, error);
+                if (i === modelEndpoints.length - 1) {
+                    throw error;
+                }
+                // Continue to next endpoint
             }
-
-            const data = await response.json();
-            console.log('AI API response received:', data);
-            
-            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-                throw new Error('Invalid AI response structure');
-            }
-            
-            const aiResponse = data.candidates[0].content.parts[0].text;
-            console.log('AI response text:', aiResponse);
-            
-            return this.parseAIResponse(aiResponse);
-        } catch (error) {
-            console.error('AI analysis error:', error);
-            throw error;
         }
     }
 

@@ -43,6 +43,7 @@ const output_schema = z.object({
     content_analysis: z.object({
 	overall_tone: z.string(),
 	overall_factuality: z.string(),
+	article_category: z.string(),
 	flags: z.array(flag)
     })
 });
@@ -264,6 +265,25 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 
     Overall Tone and Overall Factuality should be single-word ratings.
 	    You should be VERY critical of sites with anything lower than a 'Factual' rating according to Media Bias/ Fact Check. However, do not provide entirely unnecessary flags; if an article is well-written, you are not required to flag something.
+
+    ### Article Category
+    Classify the article into exactly one of the following categories based on its content, structure, and intent:
+    - "News" — straight reporting of events with minimal editorial voice
+    - "Politics" — political reporting or coverage of government, elections, or policy
+    - "Opinion" — explicitly labeled or clearly written as an opinion piece; author expresses personal views
+    - "Editorial" — institutional opinion representing the publication's stance
+    - "Analysis" — in-depth examination or interpretation of events; goes beyond straight reporting
+    - "Commentary" — opinion or reaction to current events, similar to opinion but often unsigned or staff-written
+    - "Science" — science or research reporting
+    - "Technology" — technology or tech-industry reporting
+    - "Business" — business, finance, or economic reporting
+    - "Sports" — sports reporting or commentary
+    - "Entertainment" — entertainment, culture, or lifestyle reporting
+    - "Health" — health, medicine, or wellness reporting
+    - "World" — international news reporting
+    - "Local" — local or regional news reporting
+
+    Output this as article_category.
 `,
             messages: [
                 {

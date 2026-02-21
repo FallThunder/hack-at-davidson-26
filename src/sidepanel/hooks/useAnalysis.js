@@ -235,13 +235,14 @@ export function useAnalysis() {
           clearTimeout(slowTimeoutRef.current)
           slowTimeoutRef.current = null
 
-          const { overall_tone, overall_factuality, flags } = data.data.content_analysis
+          const { overall_tone, overall_factuality, article_category, flags } = data.data.content_analysis
 
-          // Merge publisher data with tone/factuality from analyze
+          // Merge publisher data with tone/factuality/category from analyze
           const mergedSiteProfile = {
             ...(publisherDataRef.current ?? {}),
             overall_tone,
-            overall_factuality
+            overall_factuality,
+            article_category
           }
           const trustScore = computeTrustScoreFromFlags(flags, mergedSiteProfile)
 

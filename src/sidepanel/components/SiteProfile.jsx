@@ -1,6 +1,10 @@
-export function SiteProfile({ domain, company, factual_reporting, political_bias, overall_tone, overall_factuality }) {
+// Categories where content is opinion-based rather than factual reporting
+const OPINION_CATEGORIES = new Set(['Opinion', 'Editorial', 'Commentary'])
+
+export function SiteProfile({ domain, company, factual_reporting, political_bias, overall_tone, overall_factuality, article_category }) {
   const biasScore = political_bias?.score ?? 50
   const factualScore = factual_reporting?.score ?? 50
+  const isOpinionCategory = article_category && OPINION_CATEGORIES.has(article_category)
 
   // Color for overall factuality badge
   const factualityColor = {
@@ -28,6 +32,11 @@ export function SiteProfile({ domain, company, factual_reporting, political_bias
           )}
         </div>
         <div className="flex gap-1.5 flex-wrap justify-end">
+          {article_category && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {article_category}
+            </span>
+          )}
           {overall_tone && (
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${toneColor}`}>
               {overall_tone}
@@ -40,6 +49,18 @@ export function SiteProfile({ domain, company, factual_reporting, political_bias
           )}
         </div>
       </div>
+
+      {/* Opinion/Editorial warning */}
+      {isOpinionCategory && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2">
+          <svg className="shrink-0 w-3.5 h-3.5 mt-0.5 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+            {article_category} — statements reflect the author's views and may not represent factual reporting.
+          </p>
+        </div>
+      )}
 
       {/* Political Bias bar */}
       <div className="mb-3">

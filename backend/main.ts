@@ -208,7 +208,7 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 
     Overall Tone and Overall Factuality should be single-word ratings.
 
-	    You should be VERY critical of sites with anything lower than a 'Factual' rating according to Media Bias/ Fact Check.
+	    You should be VERY critical of sites with anything lower than a 'Factual' rating according to Media Bias/ Fact Check. However, do not provide entirely unnessecary flags; if an article is well-written, you are not required to flag something.
 `,
 	messages: [
 	    {

@@ -60,19 +60,19 @@ function reducer(state, action) {
   }
 }
 
-// Helper: send a message through the service worker to the content script
-function sendToContent(message) {
+// Helper: send a message through the service worker to the content script.
+// Gets the tabId from the side panel's own window context — more reliable than
+// letting the service worker guess with currentWindow:true, which can return the
+// wrong window if the user has switched focus during a long analysis.
+async function sendToContent(message) {
+  if (typeof chrome === 'undefined' || !chrome.runtime) return null
+  const tabs = await new Promise(r => chrome.tabs.query({ active: true, currentWindow: true }, r))
+  const tabId = tabs[0]?.id
+  if (!tabId) return null
   return new Promise((resolve) => {
-    if (typeof chrome === 'undefined' || !chrome.runtime) {
-      resolve(null)
-      return
-    }
-    chrome.runtime.sendMessage({ ...message, target: 'content' }, (response) => {
-      if (chrome.runtime.lastError) {
-        resolve(null)
-      } else {
-        resolve(response)
-      }
+    chrome.runtime.sendMessage({ ...message, target: 'content', tabId }, (response) => {
+      if (chrome.runtime.lastError) resolve(null)
+      else resolve(response)
     })
   })
 }

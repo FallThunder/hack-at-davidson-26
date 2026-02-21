@@ -50,7 +50,11 @@ export function App() {
   // Sync dark mode to article page tooltips/popover
   useEffect(() => {
     if (typeof chrome === 'undefined' || !chrome.runtime) return
-    chrome.runtime.sendMessage({ type: 'SET_DARK_MODE', dark: darkMode, target: 'content' })
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tabId = tabs[0]?.id
+      if (!tabId) return
+      chrome.runtime.sendMessage({ type: 'SET_DARK_MODE', dark: darkMode, target: 'content', tabId })
+    })
   }, [darkMode])
 
   // Open a long-lived port so the service worker can detect when the panel closes.

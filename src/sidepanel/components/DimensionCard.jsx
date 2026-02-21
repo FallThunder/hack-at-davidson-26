@@ -17,7 +17,7 @@ export function DimensionCard({ dimension, score, label, summary }) {
   const meta = DIMENSION_META[dimension] ?? { title: dimension, icon: '⚙️' }
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 animate-fade-in-up">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 motion-safe:animate-fade-in-up">
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
           <span className="text-base" aria-hidden="true">{meta.icon}</span>

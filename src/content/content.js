@@ -1,6 +1,8 @@
 import { extractArticle } from '../utils/articleExtractor.js'
 
 // Module-level state
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 let evidentFlags = []
 let popover = null
 let popoverOpen = false
@@ -34,7 +36,7 @@ function showTooltip(text, anchorRect) {
   el.style.left = '-9999px'
   el.style.top = '-9999px'
   el.style.visibility = 'visible'
-  el.style.opacity = '0'
+  el.style.opacity = prefersReducedMotion() ? '1' : '0'
   requestAnimationFrame(() => {
     const tw = el.offsetWidth
     const th = el.offsetHeight
@@ -252,9 +254,9 @@ const URGENCY_BG = {
   4: 'rgba(255, 68, 68, 0.45)',  5: 'rgba(255, 68, 68, 0.45)'
 }
 const URGENCY_BORDER = {
-  1: '2px solid #ffd700', 2: '2px solid #ffd700',
-  3: '2px solid #ff8c00',
-  4: '2px solid #ff4444', 5: '2px solid #ff4444'
+  1: '2px dotted #ffd700', 2: '2px dotted #ffd700',
+  3: '2px dashed #ff8c00',
+  4: '2px solid #ff4444', 5: '3px solid #ff4444'
 }
 
 // Apply highlights from flags array.
@@ -272,7 +274,7 @@ function applyHighlights(highlights) {
     if (!match) return
 
     const u = Math.min(Math.max(flag.urgency, 1), 5)
-    const tooltipText = `${flag.flag} — ${Math.round(flag.confidence * 100)}% confidence`
+    const tooltipText = `Urgency ${u}/5 — ${flag.flag} — ${Math.round(flag.confidence * 100)}% confidence`
 
     const makeSpan = () => {
       const span = document.createElement('span')
@@ -338,11 +340,13 @@ function toggleHighlights(visible) {
 function scrollToFlag(flagIndex) {
   const spans = document.querySelectorAll(`[data-evident-flag-index="${flagIndex}"]`)
   if (!spans.length) return
-  spans[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
-  spans.forEach(span => {
-    span.classList.add('evident-highlight-pulse')
-    setTimeout(() => span.classList.remove('evident-highlight-pulse'), 1200)
-  })
+  spans[0].scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' })
+  if (!prefersReducedMotion()) {
+    spans.forEach(span => {
+      span.classList.add('evident-highlight-pulse')
+      setTimeout(() => span.classList.remove('evident-highlight-pulse'), 1200)
+    })
+  }
 }
 
 function clearHighlights() {

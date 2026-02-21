@@ -90,23 +90,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.target !== 'content') return
 
-  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-    const tab = tabs[0]
-    if (!tab?.id) {
-      sendResponse({ error: 'No active tab found' })
-      return
-    }
+  // tabId is provided by the side panel (queried from its own window context),
+  // which is more reliable than querying currentWindow from the service worker
+  // when the user may have switched focus to another window.
+  const tabId = message.tabId
+  if (!tabId) {
+    sendResponse({ error: 'No tab ID provided' })
+    return
+  }
+
+  ;(async () => {
     try {
-      const response = await chrome.tabs.sendMessage(tab.id, message)
+      const response = await chrome.tabs.sendMessage(tabId, message)
       sendResponse(response)
     } catch (error) {
       // Content script not present (e.g. extension reloaded without refreshing page)
       // Re-inject it programmatically and retry once
       if (error.message?.includes('Receiving end does not exist')) {
         try {
-          await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] })
-          await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content/highlight.css'] })
-          const response = await chrome.tabs.sendMessage(tab.id, message)
+          await chrome.scripting.executeScript({ target: { tabId }, files: ['content/content.js'] })
+          await chrome.scripting.insertCSS({ target: { tabId }, files: ['content/highlight.css'] })
+          const response = await chrome.tabs.sendMessage(tabId, message)
           sendResponse(response)
         } catch (retryError) {
           sendResponse({ error: retryError.message })
@@ -115,7 +119,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ error: error.message })
       }
     }
-  })
+  })()
 
   return true  // Keep message channel open for async response
 })

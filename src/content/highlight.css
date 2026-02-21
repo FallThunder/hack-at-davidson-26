@@ -11,27 +11,32 @@
   filter: brightness(0.92);
 }
 
-/* Urgency 1–2: yellow */
+/* Urgency 1–2: yellow, dotted border (lightest visual weight) */
 .evident-highlight[data-evident-highlight="urgency-1"],
 .evident-highlight[data-evident-highlight="urgency-2"] {
   background-color: rgba(255, 215, 0, 0.35) !important;
   color: #4a3800 !important;
-  border-bottom: 2px solid #ffd700 !important;
+  border-bottom: 2px dotted #ffd700 !important;
 }
 
-/* Urgency 3: orange */
+/* Urgency 3: orange, dashed border (medium visual weight) */
 .evident-highlight[data-evident-highlight="urgency-3"] {
   background-color: rgba(255, 140, 0, 0.35) !important;
   color: #4a2000 !important;
-  border-bottom: 2px solid #ff8c00 !important;
+  border-bottom: 2px dashed #ff8c00 !important;
 }
 
-/* Urgency 4–5: red */
+/* Urgency 4–5: red, solid border */
 .evident-highlight[data-evident-highlight="urgency-4"],
 .evident-highlight[data-evident-highlight="urgency-5"] {
   background-color: rgba(255, 68, 68, 0.35) !important;
   color: #8b0000 !important;
   border-bottom: 2px solid #ff4444 !important;
+}
+
+/* Urgency 5: thicker solid border (heaviest visual weight) */
+.evident-highlight[data-evident-highlight="urgency-5"] {
+  border-bottom-width: 3px !important;
 }
 
 /* Scroll-to pulse: briefly brighten the span when jumped to from the side panel */
@@ -89,6 +94,13 @@
 }
 
 /* Tooltip visibility is controlled via JS (mouseenter/mouseleave) */
+
+/* Reduced motion: disable all transitions and animations */
+@media (prefers-reduced-motion: reduce) {
+  .evident-highlight       { transition: none !important; }
+  .evident-highlight-pulse { animation: none !important; }
+  .evident-tooltip         { transition: none !important; }
+}
 
 /* Click popover — light mode default */
 #evident-popover {

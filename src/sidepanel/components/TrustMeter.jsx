@@ -7,8 +7,12 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS  // ≈ 282.7
 export function TrustMeter({ score, tier }) {
   const [displayScore, setDisplayScore] = useState(0)
 
-  // Animate the number counting up
+  // Animate the number counting up (skipped under prefers-reduced-motion)
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayScore(score)
+      return
+    }
     const duration = 1200
     const startTime = performance.now()
 
@@ -29,8 +33,10 @@ export function TrustMeter({ score, tier }) {
   // strokeDashoffset: full circle = CIRCUMFERENCE (empty arc), 0 = full arc
   const dashOffset = CIRCUMFERENCE - (score / 100) * CIRCUMFERENCE
 
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
   return (
-    <div className="flex flex-col items-center py-5 animate-fade-in-up">
+    <div className="flex flex-col items-center py-5 motion-safe:animate-fade-in-up">
       <div className="relative w-36 h-36">
         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" aria-hidden="true">
           {/* Background track */}
@@ -50,7 +56,7 @@ export function TrustMeter({ score, tier }) {
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={dashOffset}
-            style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            style={{ transition: reducedMotion ? 'none' : 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
           />
         </svg>
 

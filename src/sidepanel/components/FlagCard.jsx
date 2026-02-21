@@ -29,7 +29,10 @@ export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, source
   useEffect(() => {
     if (!isActive) return
     setExpanded(true)
-    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    cardRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'center'
+    })
   }, [isActive])
 
   return (
@@ -45,10 +48,12 @@ export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, source
       {/* Header: urgency dot, flag type, confidence */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <span
-            className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`}
-            aria-label={`Urgency ${clampedUrgency} of 5`}
-          />
+          <span className="flex items-center gap-1 shrink-0" aria-label={`Urgency ${clampedUrgency} of 5`}>
+            <span className={`w-2 h-2 rounded-full ${dotColor}`} aria-hidden="true" />
+            <span className="text-xs font-semibold tabular-nums text-gray-400 dark:text-gray-500">
+              {clampedUrgency}/5
+            </span>
+          </span>
           <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
             {flag}
           </span>

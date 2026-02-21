@@ -786,8 +786,6 @@ class ContentAnalyzer {
             }
         }
 
-        // Find main article content
-        const articleElement = this.findMainArticleElement();
         if (articleElement) {
             try {
                 // Extract paragraphs

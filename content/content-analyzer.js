@@ -7,9 +7,11 @@ class ContentAnalyzer {
         
         // Rate limiting and quota management
         this.lastApiCall = 0;
-        this.minCallInterval = 2000; // 2 seconds between calls
+        this.minCallInterval = 5000; // 5 seconds between calls (increased)
         this.quotaExhausted = false;
         this.quotaResetTime = null;
+        this.maxRetryAttempts = 2; // Limit retry attempts
+        this.skipModelDiscovery = false; // Skip model discovery after first quota hit
         this.newsIndicators = {
             // Common news article selectors
             selectors: [
@@ -134,38 +136,25 @@ class ContentAnalyzer {
         // Extract main content for AI analysis
         analysis.mainContent = this.extractMainContent();
         
-        // Perform AI-powered analysis
-        try {
-            const aiAnalysis = await this.performAIAnalysis(analysis.mainContent, analysis.articleData);
-            analysis.biasAnalysis = aiAnalysis.biasAnalysis;
-            analysis.emotionalAnalysis = aiAnalysis.emotionalAnalysis;
-            analysis.factCheckingData = aiAnalysis.factCheckingData;
-            analysis.aiInsights = aiAnalysis.insights;
-        } catch (error) {
-            console.warn('AI analysis failed, falling back to pattern matching:', error);
-            // Fallback to basic analysis
-            analysis.biasAnalysis = {
-                politicalBias: 'neutral',
-                politicalScore: 0,
-                reasoning: 'AI analysis unavailable - using fallback'
-            };
-            analysis.emotionalAnalysis = {
-                manipulationRisk: 'low',
-                emotionalIntensity: 0,
-                patterns: [],
-                reasoning: 'AI analysis unavailable - using fallback'
-            };
-            analysis.factCheckingData = {
-                numericalClaims: [],
-                factualClaims: [],
-                sources: [],
-                credibilityScore: 50
-            };
-            analysis.aiInsights = {
-                overallAssessment: 'Analysis failed - please try again',
-                redFlags: [],
-                strengths: []
-            };
+        // Check if AI should be attempted or skip to pattern analysis
+        const shouldTryAI = !this.quotaExhausted && analysis.mainContent.mainText.length > 200;
+        
+        if (shouldTryAI) {
+            try {
+                console.log('Attempting AI analysis...');
+                const aiAnalysis = await this.performAIAnalysis(analysis.mainContent, analysis.articleData);
+                analysis.biasAnalysis = aiAnalysis.biasAnalysis;
+                analysis.emotionalAnalysis = aiAnalysis.emotionalAnalysis;
+                analysis.factCheckingData = aiAnalysis.factCheckingData;
+                analysis.aiInsights = aiAnalysis.insights;
+                console.log('AI analysis completed successfully');
+            } catch (error) {
+                console.warn('AI analysis failed, using pattern analysis:', error.message);
+                this.usePatternAnalysis(analysis);
+            }
+        } else {
+            console.log('Skipping AI analysis - using pattern-based analysis');
+            this.usePatternAnalysis(analysis);
         }
 
         // Cache the complete result
@@ -175,6 +164,42 @@ class ContentAnalyzer {
         });
 
         return analysis;
+    }
+
+    // Use pattern-based analysis as fallback
+    usePatternAnalysis(analysis) {
+        const content = analysis.mainContent;
+        const biasAnalysis = this.analyzeBias(content);
+        const emotionalAnalysis = this.analyzeEmotionalLanguage(content);
+        const factCheckingData = this.extractFactCheckingData();
+        
+        analysis.biasAnalysis = {
+            politicalBias: biasAnalysis.politicalBias,
+            politicalScore: biasAnalysis.politicalScore,
+            reasoning: 'Pattern-based analysis (AI quota exhausted)'
+        };
+        
+        analysis.emotionalAnalysis = {
+            manipulationRisk: emotionalAnalysis.manipulationRisk,
+            emotionalIntensity: emotionalAnalysis.emotionalIntensity,
+            patterns: emotionalAnalysis.patterns,
+            reasoning: 'Pattern-based analysis (AI quota exhausted)'
+        };
+        
+        analysis.factCheckingData = {
+            numericalClaims: factCheckingData.numericalClaims,
+            factualClaims: content.claims || [],
+            sources: content.sources || [],
+            credibilityScore: Math.min(50 + (biasAnalysis.confidence / 2), 80) // Basic credibility score
+        };
+        
+        analysis.aiInsights = {
+            overallAssessment: this.quotaExhausted ? 
+                'Analysis completed using pattern matching (AI quota exhausted)' : 
+                'Analysis completed using pattern matching',
+            redFlags: biasAnalysis.biasIndicators.concat(emotionalAnalysis.patterns),
+            strengths: ['Content analyzed for bias patterns', 'Claims extracted for verification']
+        };
     }
 
     // Analyze if current page is a news article
@@ -1088,27 +1113,42 @@ class ContentAnalyzer {
         return data;
     }
 
-    // Discover available models from Google's API
+    // Discover available models from Google's API (with quota awareness)
     async discoverAvailableModels() {
+        // Skip discovery if we've hit quota limits or already discovered
+        if (this.skipModelDiscovery || this.quotaExhausted) {
+            console.log('Skipping model discovery due to quota concerns');
+            return [];
+        }
+
         try {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`);
             if (response.ok) {
                 const data = await response.json();
-                console.log('Available models:', data);
+                console.log('Available models discovered');
                 
                 // Filter for models that support generateContent and are likely free
                 const availableModels = data.models
                     .filter(model => 
                         model.supportedGenerationMethods?.includes('generateContent') &&
-                        (model.name.includes('flash') || model.name.includes('pro'))
+                        model.name.includes('flash') // Only flash models to save quota
                     )
+                    .slice(0, 2) // Limit to 2 models max
                     .map(model => `https://generativelanguage.googleapis.com/v1beta/${model.name}:generateContent`);
                 
-                console.log('Filtered available models:', availableModels);
+                console.log('Filtered available models:', availableModels.length);
+                
+                // Skip discovery in future calls to save quota
+                this.skipModelDiscovery = true;
                 return availableModels;
+            } else if (response.status === 429) {
+                // Mark discovery as failed due to quota
+                this.skipModelDiscovery = true;
+                console.warn('Model discovery hit quota limit');
             }
         } catch (error) {
             console.warn('Could not discover models:', error);
+            this.skipModelDiscovery = true;
         }
         return [];
     }
@@ -1147,14 +1187,15 @@ class ContentAnalyzer {
 
     // Handle quota exhaustion errors
     handleQuotaError(error, retryDelay) {
-        console.warn('Quota exhausted:', error);
+        console.warn('Quota exhausted - entering extended cooldown');
         this.quotaExhausted = true;
+        this.skipModelDiscovery = true; // Stop all discovery attempts
         
-        // Parse retry delay from error (in seconds) and add buffer
-        const delaySeconds = retryDelay || 60; // Default 1 minute if no delay specified
-        this.quotaResetTime = Date.now() + (delaySeconds * 1000) + 60000; // Add 1 minute buffer
+        // Parse retry delay from error (in seconds) and add significant buffer
+        const delaySeconds = retryDelay || 3600; // Default 1 hour if no delay specified
+        this.quotaResetTime = Date.now() + (delaySeconds * 1000) + 1800000; // Add 30 minute buffer
         
-        console.log(`Quota exhausted. Will retry AI analysis in ${Math.ceil(delaySeconds/60)} minutes.`);
+        console.log(`Quota exhausted. AI analysis disabled for ${Math.ceil((delaySeconds + 1800)/60)} minutes.`);
     }
 
     // Perform AI-powered analysis using Gemini
@@ -1171,17 +1212,24 @@ class ContentAnalyzer {
         // Implement rate limiting
         await this.waitForRateLimit();
 
-        // First try to discover available models
-        let modelEndpoints = await this.discoverAvailableModels();
+        // Use minimal model list to avoid quota waste
+        let modelEndpoints = [];
         
-        // If discovery failed, use fallback list (prioritize lighter models to save quota)
+        // Only try model discovery if we haven't hit quota yet
+        if (!this.quotaExhausted && !this.skipModelDiscovery) {
+            modelEndpoints = await this.discoverAvailableModels();
+        }
+        
+        // Use minimal fallback list to save quota
         if (modelEndpoints.length === 0) {
-            console.log('Using fallback model list');
+            console.log('Using minimal fallback model list');
             modelEndpoints = [
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent',
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent'
             ];
         }
+        
+        // Limit to maximum 2 attempts to prevent quota waste
+        modelEndpoints = modelEndpoints.slice(0, this.maxRetryAttempts);
 
         for (let i = 0; i < modelEndpoints.length; i++) {
             try {
@@ -1221,10 +1269,14 @@ class ContentAnalyzer {
                         try {
                             const errorData = JSON.parse(errorText);
                             const retryDelay = errorData.details?.find(d => d['@type']?.includes('RetryInfo'))?.retryDelay;
-                            const delaySeconds = retryDelay ? parseInt(retryDelay.replace('s', '')) : 60;
+                            const delaySeconds = retryDelay ? parseInt(retryDelay.replace('s', '')) : 3600; // Default 1 hour
                             this.handleQuotaError(errorData, delaySeconds);
+                            
+                            // Immediately break out of loop to prevent more API calls
+                            throw new Error('Quota exhausted - stopping all AI attempts');
                         } catch (e) {
-                            this.handleQuotaError(errorText, 60);
+                            this.handleQuotaError(errorText, 3600); // 1 hour default
+                            throw new Error('Quota exhausted - stopping all AI attempts');
                         }
                     }
                     

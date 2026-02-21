@@ -17,6 +17,10 @@ Detect bias. Verify claims. Understand truth — at a glance.
 
 **Making truth easier to see.**
 
+<br>
+
+**[Download latest release (evident.zip)](https://github.com/FallThunder/hack-at-davidson-26/releases/latest/download/evident.zip)**
+
 </div>
 
 ---
@@ -64,19 +68,24 @@ On any other page, the panel shows a "no analysis available" message. The live G
 
 ---
 
-## Installation (Developer Mode)
+## Installation
+
+### Option A — Download pre-built release (recommended)
+
+1. Download **[evident.zip](https://github.com/FallThunder/hack-at-davidson-26/releases/latest/download/evident.zip)** from the latest release
+2. Unzip it — you'll get a `dist/` folder
+3. Open Chrome → `chrome://extensions` → enable **Developer mode** (top right)
+4. Click **Load unpacked** → select the `dist/` folder
+5. Navigate to one of the demo article URLs above and click the Evident toolbar icon
+
+### Option B — Build from source
 
 ```bash
 npm install
 npm run build
 ```
 
-Then in Chrome:
-1. Go to `chrome://extensions`
-2. Enable **Developer mode** (top right)
-3. Click **Load unpacked** → select the `/dist` folder
-
-To test: navigate to one of the two supported article URLs above, then click the Evident toolbar icon.
+Then load the `/dist` folder as an unpacked extension (same steps 3–5 above).
 
 ---
 

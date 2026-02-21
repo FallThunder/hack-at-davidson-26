@@ -45,12 +45,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Toolbar icon by trust score (side panel → background)
   if (message.type === 'SET_ICON_BY_SCORE') {
     const tier = message.tier === 'high' ? 'green' : message.tier === 'low' ? 'red' : 'yellow'
-    const path = { 16: `icons/icon-${tier}.png`, 48: `icons/icon-${tier}.png` }
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tabId = tabs[0]?.id
-      if (tabId) chrome.action.setIcon({ tabId, path }).catch(() => {})
+    const path = { 16: `icons/icon16-${tier}.png`, 48: `icons/icon48-${tier}.png` }
+    const tabId = message.tabId
+    const doSet = (id) => {
+      if (id) {
+        chrome.action.setIcon({ tabId: id, path }).catch((err) => {
+          console.error('Evident setIcon failed', err)
+        })
+      }
       sendResponse({ ok: true })
-    })
+    }
+    if (tabId != null) {
+      doSet(tabId)
+    } else {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => { doSet(tabs[0]?.id) })
+    }
     return true
   }
 

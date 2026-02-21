@@ -120,7 +120,7 @@ if (existsSync(nobgPath)) {
     copyFileSync(nobgPath, resolve(root, 'dist/icons', `icon${size}.png`))
   }
 }
-// Score-colored icons for toolbar (setIcon by tier)
+// Score-colored icons for toolbar (setIcon by tier; same size keys as default_icon)
 const tierIcons = [
   { tier: 'green', file: 'evident-nobg-green.png' },
   { tier: 'yellow', file: 'evident-nobg-yellow.png' },
@@ -129,7 +129,9 @@ const tierIcons = [
 for (const { tier, file } of tierIcons) {
   const src = resolve(root, 'public', file)
   if (existsSync(src)) {
-    copyFileSync(src, resolve(root, 'dist/icons', `icon-${tier}.png`))
+    for (const size of [16, 48]) {
+      copyFileSync(src, resolve(root, 'dist/icons', `icon${size}-${tier}.png`))
+    }
   }
 }
 

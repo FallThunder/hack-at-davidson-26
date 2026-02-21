@@ -144,7 +144,10 @@ class ContentAnalyzer {
                 if (this.newsIndicators.structuredDataTypes.includes(data['@type'])) {
                     confidence += 30;
                     indicators.push('structured_data');
-                    articleData = { ...articleData, ...data };
+                    
+                    // Process structured data to extract clean information
+                    const processedData = this.processStructuredData(data);
+                    articleData = { ...articleData, ...processedData };
                     break;
                 }
             }
@@ -216,6 +219,100 @@ class ContentAnalyzer {
         return data;
     }
 
+    // Process structured data to extract clean information
+    processStructuredData(data) {
+        const processed = {};
+        
+        // Handle title
+        if (data.headline) {
+            processed.title = data.headline;
+        } else if (data.name) {
+            processed.title = data.name;
+        }
+        
+        // Handle authors - can be string, object, or array
+        if (data.author) {
+            processed.authors = this.extractAuthorsFromStructuredData(data.author);
+            processed.author = processed.authors.join(', ');
+        }
+        
+        // Handle publication date
+        if (data.datePublished) {
+            processed.publishDate = data.datePublished;
+        } else if (data.dateCreated) {
+            processed.publishDate = data.dateCreated;
+        }
+        
+        // Handle modified date
+        if (data.dateModified) {
+            processed.modifiedDate = data.dateModified;
+        }
+        
+        // Handle publisher
+        if (data.publisher) {
+            if (typeof data.publisher === 'object' && data.publisher.name) {
+                processed.publisher = data.publisher.name;
+            } else if (typeof data.publisher === 'string') {
+                processed.publisher = data.publisher;
+            }
+        }
+        
+        // Handle description
+        if (data.description) {
+            processed.description = data.description;
+        }
+        
+        // Handle word count
+        if (data.wordCount) {
+            processed.wordCount = data.wordCount;
+        }
+        
+        // Handle article section
+        if (data.articleSection) {
+            processed.section = data.articleSection;
+        }
+        
+        // Handle keywords
+        if (data.keywords) {
+            if (Array.isArray(data.keywords)) {
+                processed.keywords = data.keywords;
+            } else if (typeof data.keywords === 'string') {
+                processed.keywords = data.keywords.split(',').map(k => k.trim());
+            }
+        }
+        
+        return processed;
+    }
+    
+    // Extract authors from structured data (handles various formats)
+    extractAuthorsFromStructuredData(authorData) {
+        const authors = [];
+        
+        if (Array.isArray(authorData)) {
+            authorData.forEach(author => {
+                if (typeof author === 'string') {
+                    authors.push(author);
+                } else if (typeof author === 'object') {
+                    if (author.name) {
+                        authors.push(author.name);
+                    } else if (author['@type'] === 'Person' && author.givenName && author.familyName) {
+                        authors.push(`${author.givenName} ${author.familyName}`);
+                    }
+                }
+            });
+        } else if (typeof authorData === 'string') {
+            authors.push(authorData);
+        } else if (typeof authorData === 'object') {
+            if (authorData.name) {
+                authors.push(authorData.name);
+            } else if (authorData['@type'] === 'Person' && authorData.givenName && authorData.familyName) {
+                authors.push(`${authorData.givenName} ${authorData.familyName}`);
+            }
+        }
+        
+        return authors.filter(author => author && author.trim().length > 0);
+    }
+
     // Analyze meta tags for news indicators
     analyzeMetaTags() {
         let score = 0;
@@ -226,7 +323,44 @@ class ContentAnalyzer {
             if (meta) {
                 score += 10;
                 const key = tagName.replace('article:', '').replace('og:article:', '').replace('og:', '');
-                data[key] = meta.getAttribute('content');
+                const content = meta.getAttribute('content');
+                
+                // Handle author meta tags specially
+                if (key === 'author') {
+                    if (!data.authors) data.authors = [];
+                    // Split multiple authors if comma-separated
+                    const authorList = content.split(',').map(a => a.trim()).filter(a => a);
+                    data.authors.push(...authorList);
+                    data.author = data.authors.join(', ');
+                } else {
+                    data[key] = content;
+                }
+            }
+        });
+
+        // Check for additional author meta tags
+        const additionalAuthorSelectors = [
+            'meta[name="author"]',
+            'meta[name="article:author"]',
+            'meta[property="article:author"]',
+            'meta[name="twitter:creator"]',
+            'meta[name="sailthru.author"]'
+        ];
+        
+        additionalAuthorSelectors.forEach(selector => {
+            const meta = document.querySelector(selector);
+            if (meta) {
+                const content = meta.getAttribute('content');
+                if (content) {
+                    if (!data.authors) data.authors = [];
+                    const authorList = content.split(',').map(a => a.trim()).filter(a => a);
+                    authorList.forEach(author => {
+                        if (!data.authors.includes(author)) {
+                            data.authors.push(author);
+                        }
+                    });
+                    data.author = data.authors.join(', ');
+                }
             }
         });
 
@@ -274,14 +408,48 @@ class ContentAnalyzer {
         data.characterCount = text.length;
 
         // Look for byline/author information
-        const authorSelectors = ['.author', '.byline', '.by-author', '[rel="author"]'];
+        const authorSelectors = [
+            '.author', '.byline', '.by-author', '[rel="author"]',
+            '.article-author', '.post-author', '.story-author',
+            '[itemprop="author"]', '.author-name', '.writer',
+            // Common news site patterns
+            '.gtm-author', '.author-link', '.article-byline',
+            '.story-byline', '.byline-author', '.contributor',
+            '.reporter', '.journalist', '.writer-name',
+            // Axios-specific patterns
+            '.AxiosAuthorByline', '.author-byline', 
+            '[data-testid="author"]', '[data-cy="author"]',
+            // Other common patterns
+            '.meta-author', '.post-meta .author', '.entry-author',
+            '.article-meta .author', '.story-meta .author'
+        ];
+        
+        let authors = [];
         for (const selector of authorSelectors) {
-            const author = element.querySelector(selector) || document.querySelector(selector);
-            if (author) {
-                score += 10;
-                data.author = author.textContent.trim();
-                break;
+            const authorElements = element.querySelectorAll(selector);
+            if (authorElements.length === 0) {
+                // Try document-wide search if not found in article
+                const globalAuthor = document.querySelector(selector);
+                if (globalAuthor) {
+                    const authorText = globalAuthor.textContent.trim();
+                    if (authorText && !authors.includes(authorText)) {
+                        authors.push(authorText);
+                    }
+                }
+            } else {
+                authorElements.forEach(authorEl => {
+                    const authorText = authorEl.textContent.trim();
+                    if (authorText && !authors.includes(authorText)) {
+                        authors.push(authorText);
+                    }
+                });
             }
+        }
+        
+        if (authors.length > 0) {
+            score += 10;
+            data.authors = authors;
+            data.author = authors.join(', '); // For backward compatibility
         }
 
         // Look for publish date

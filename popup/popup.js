@@ -148,17 +148,49 @@ document.addEventListener('DOMContentLoaded', function() {
         let detailsHtml = '';
         if (analysis.articleData) {
             const data = analysis.articleData;
-            if (data.author) {
-                detailsHtml += `<div class="detail-item"><span>Author:</span><span>${data.author}</span></div>`;
+            
+            // Handle authors (can be array or string)
+            if (data.authors && Array.isArray(data.authors) && data.authors.length > 0) {
+                const authorText = data.authors.join(', ');
+                detailsHtml += `<div class="detail-item"><span>Author${data.authors.length > 1 ? 's' : ''}:</span><span>${escapeHtml(authorText)}</span></div>`;
+            } else if (data.author && typeof data.author === 'string') {
+                detailsHtml += `<div class="detail-item"><span>Author:</span><span>${escapeHtml(data.author)}</span></div>`;
             }
+            
+            // Handle publisher
+            if (data.publisher) {
+                detailsHtml += `<div class="detail-item"><span>Publisher:</span><span>${escapeHtml(data.publisher)}</span></div>`;
+            }
+            
+            // Handle publication date
             if (data.publishDate) {
                 detailsHtml += `<div class="detail-item"><span>Published:</span><span>${formatDate(data.publishDate)}</span></div>`;
             }
-            if (data.wordCount) {
-                detailsHtml += `<div class="detail-item"><span>Word count:</span><span>${data.wordCount}</span></div>`;
+            
+            // Handle modified date
+            if (data.modifiedDate && data.modifiedDate !== data.publishDate) {
+                detailsHtml += `<div class="detail-item"><span>Modified:</span><span>${formatDate(data.modifiedDate)}</span></div>`;
             }
+            
+            // Handle section/category
+            if (data.section) {
+                detailsHtml += `<div class="detail-item"><span>Section:</span><span>${escapeHtml(data.section)}</span></div>`;
+            }
+            
+            // Handle word count
+            if (data.wordCount) {
+                detailsHtml += `<div class="detail-item"><span>Word count:</span><span>${data.wordCount.toLocaleString()}</span></div>`;
+            }
+            
+            // Handle paragraph count
             if (data.paragraphCount) {
                 detailsHtml += `<div class="detail-item"><span>Paragraphs:</span><span>${data.paragraphCount}</span></div>`;
+            }
+            
+            // Handle keywords
+            if (data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
+                const keywordText = data.keywords.slice(0, 5).join(', '); // Show first 5 keywords
+                detailsHtml += `<div class="detail-item"><span>Keywords:</span><span>${escapeHtml(keywordText)}</span></div>`;
             }
         }
         newsDetails.innerHTML = detailsHtml;
@@ -217,10 +249,24 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isNaN(date.getTime())) {
                 return dateString; // Return original if parsing fails
             }
-            return date.toLocaleDateString();
+            return date.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
         } catch {
             return dateString;
         }
+    }
+
+    // Escape HTML to prevent XSS and handle special characters
+    function escapeHtml(text) {
+        if (typeof text !== 'string') {
+            return String(text);
+        }
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // Update status text with styling

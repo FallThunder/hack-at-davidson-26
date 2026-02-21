@@ -110,7 +110,15 @@ async function publisher(url: string): Response {
 	},
 	max_tokens: 500
     });
+    try {
     const finalMsg = await msg.finalMessage();
+    } catch (e) {
+	    console.error(e);
+	    return Response.json({
+		    ready: true,
+		    data: null
+	    }, noCache);
+    }
     const output = finalMsg.parsed_output;
 
     database[url] = {
@@ -148,10 +156,19 @@ async function analyze(url: string, text: string): Response {
 				    data: null
 			    }, noCache);
 		    } else if (entry.analysis.content) {
+			    if (entry.analysis.content === null) {
+				    entry.analysis = undefined;
+				    return Response.json({
+					    ready: true,
+					    data: null
+				    }, noCache);
+			    } else {
 			    return Response.json({
 				    ready: true,
 				    data: entry.analysis.content
 			    }, yesCache);
+			    }
+			    
 		    }
 	    }
     }
@@ -241,6 +258,14 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 		}
 	};
 	console.log('completed analysis for ' + url);
+    }).catch((e) => {
+	    console.error(e);
+	    database[url] = {
+		    analysis: {
+			    waiting: false,
+			    content: null
+		    }
+	    };
     });
     return Response.json({
 	ready: false,

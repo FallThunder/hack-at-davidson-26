@@ -3,7 +3,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error)
 })
 
-// When the active tab navigates to a new URL, notify the side panel to re-analyze
+// When the active tab navigates to a new URL, notify the side panel to re-analyze and reset toolbar icon
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!changeInfo.url || !tab.active) return
   chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {})
@@ -45,6 +45,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { target, ...rest } = message
     chrome.runtime.sendMessage(rest).catch(() => {})
     sendResponse({ ok: true })
+    return true
+  }
+
+  // Toolbar icon by trust score (side panel → background)
+  if (message.type === 'SET_ICON_BY_SCORE') {
+    const tier = message.tier === 'high' ? 'green' : message.tier === 'low' ? 'red' : 'yellow'
+    const path = { 16: `icons/icon16-${tier}.png`, 48: `icons/icon48-${tier}.png` }
+    const tabId = message.tabId
+    const doSet = (id) => {
+      if (id) {
+        chrome.action.setIcon({ tabId: id, path }).catch((err) => {
+          console.error('Evident setIcon failed', err)
+        })
+      }
+      sendResponse({ ok: true })
+    }
+    if (tabId != null) {
+      doSet(tabId)
+    } else {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => { doSet(tabs[0]?.id) })
+    }
     return true
   }
 

@@ -5,7 +5,38 @@ export function extractArticle(doc) {
   const headline = extractHeadline(doc)
   const bodyEl = findBodyElement(doc)
   const { text, sentences } = extractSentences(bodyEl)
-  return { headline, text, sentences, url: doc.location.href }
+  return { headline, text, sentences, url: doc.location.href, isLikelyArticle: detectIsArticle(doc, text) }
+}
+
+// Heuristic: distinguish article pages from homepages, category pages, search pages, etc.
+function detectIsArticle(doc, text) {
+  // Strong positive: Open Graph type explicitly set to "article"
+  const ogType = doc.querySelector('meta[property="og:type"]')?.getAttribute('content')
+  if (ogType === 'article') return true
+
+  // Strong positive: article publication timestamp present
+  if (doc.querySelector('meta[property="article:published_time"]')) return true
+
+  // URL-based heuristics
+  try {
+    const { pathname } = new URL(doc.location.href)
+    // Bare homepage — no article signals above
+    if (pathname === '/' || pathname === '') return false
+    // Year in path (most news CMS patterns: /2024/01/15/...)
+    if (/\/20\d{2}\//.test(pathname)) return true
+    // Long numeric article ID (/story/12345678 or /68123456)
+    if (/\/\d{7,}(?:\/|$)/.test(pathname)) return true
+    // Explicit .html extension (common on older CMS)
+    if (/\.(html?)(?:\?|$)/.test(pathname)) return true
+    // Long hyphenated slug in last path segment (≥4 hyphen-separated parts, ≥20 chars)
+    const segments = pathname.split('/').filter(Boolean)
+    const lastSeg = segments[segments.length - 1] || ''
+    if (lastSeg.split('-').length >= 4 && lastSeg.length >= 20) return true
+  } catch (_) {}
+
+  // Last resort: substantial body text suggests a real article
+  const wordCount = text.trim().split(/\s+/).length
+  return wordCount >= 400
 }
 
 function extractHeadline(doc) {

@@ -120,6 +120,18 @@ if (existsSync(nobgPath)) {
     copyFileSync(nobgPath, resolve(root, 'dist/icons', `icon${size}.png`))
   }
 }
+// Score-colored icons for toolbar (setIcon by tier)
+const tierIcons = [
+  { tier: 'green', file: 'evident-nobg-green.png' },
+  { tier: 'yellow', file: 'evident-nobg-yellow.png' },
+  { tier: 'red', file: 'evident-nobg-red.png' }
+]
+for (const { tier, file } of tierIcons) {
+  const src = resolve(root, 'public', file)
+  if (existsSync(src)) {
+    copyFileSync(src, resolve(root, 'dist/icons', `icon-${tier}.png`))
+  }
+}
 
 // ─── 5. Fix sidepanel index.html location ─────────────────────────────────────
 // Vite outputs HTML relative to project root, so it lands at dist/src/sidepanel/index.html.

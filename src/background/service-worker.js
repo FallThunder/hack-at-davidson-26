@@ -3,9 +3,10 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error)
 })
 
-// When the active tab navigates to a new URL, notify the side panel to re-analyze
+// When the active tab navigates to a new URL, notify the side panel to re-analyze and reset toolbar icon
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!changeInfo.url || !tab.active) return
+  chrome.action.setIcon({ tabId, path: { 16: 'icons/icon16.png', 48: 'icons/icon48.png' } }).catch(() => {})
   chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {
     // Side panel may not be open — ignore
   })
@@ -38,6 +39,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { target, ...rest } = message
     chrome.runtime.sendMessage(rest).catch(() => {})
     sendResponse({ ok: true })
+    return true
+  }
+
+  // Toolbar icon by trust score (side panel → background)
+  if (message.type === 'SET_ICON_BY_SCORE') {
+    const tier = message.tier === 'high' ? 'green' : message.tier === 'low' ? 'red' : 'yellow'
+    const path = { 16: `icons/icon-${tier}.png`, 48: `icons/icon-${tier}.png` }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tabId = tabs[0]?.id
+      if (tabId) chrome.action.setIcon({ tabId, path }).catch(() => {})
+      sendResponse({ ok: true })
+    })
     return true
   }
 

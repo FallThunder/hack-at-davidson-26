@@ -74,6 +74,13 @@ export function App() {
     setActiveFlag(null)
   }, [flags])
 
+  // Set toolbar icon by trust score when analysis completes
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.action) return
+    if (status !== 'complete' || !trustScore?.tier) return
+    chrome.runtime.sendMessage({ type: 'SET_ICON_BY_SCORE', tier: trustScore.tier }).catch(() => {})
+  }, [status, trustScore])
+
   const isAnalyzing = status === 'extracting' || status === 'analyzing'
 
   return (

@@ -3,10 +3,16 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error)
 })
 
-// When the active tab navigates to a new URL, notify the side panel to re-analyze and reset toolbar icon
+// Notify the side panel to re-analyze on URL change or page refresh.
+// changeInfo.url fires on navigation; changeInfo.status === 'complete' catches
+// same-URL refreshes where the URL doesn't change but the page reloads.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (!changeInfo.url || !tab.active) return
-  chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {})
+  if (!tab.active) return
+  if (changeInfo.url) {
+    chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {})
+  } else if (changeInfo.status === 'complete') {
+    chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: tab.url }).catch(() => {})
+  }
 })
 
 // When the user switches tabs, re-analyze the newly active tab

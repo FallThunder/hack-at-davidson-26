@@ -173,8 +173,9 @@ export function useAnalysis() {
       if (runIdRef.current === runId) dispatch({ type: 'SLOW_WARNING' })
     }, 120000)
 
-    // Fetch publisher data immediately (fast, cached by backend)
-    fetch(`${BACKEND_URL}/publisher?url=${encodeURIComponent(url)}`, { cache: 'no-store' })
+    // Fetch publisher data by domain (not full article URL) — one cache entry per publisher
+    const domain = new URL(url).hostname.replace(/^www\./, '')
+    fetch(`${BACKEND_URL}/publisher?url=${encodeURIComponent(domain)}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (runIdRef.current !== runId) return  // stale — a newer analysis is running

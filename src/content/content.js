@@ -195,6 +195,8 @@ function findNodeAtCharOffset(segments, charOffset) {
 }
 
 // Find best matching position for targetText across ALL text (spanning DOM boundaries).
+// Tries window sizes w-2 through w+2 to handle tokenization differences (e.g. "7%" vs
+// "7 percent", hyphenated words, punctuation) that shift the word count by 1–2.
 // Returns { startNode, startOffset, endNode, endOffset } or null.
 function findSimilarText(textMap, targetText, threshold = 0.5) {
   const { words: targetWords } = tokenize(targetText)
@@ -202,21 +204,27 @@ function findSimilarText(textMap, targetText, threshold = 0.5) {
   if (w === 0) return null
 
   const { words: contentWords, offsets: contentOffsets } = tokenize(textMap.fullText)
-  if (contentWords.length < w) return null
+  if (contentWords.length === 0) return null
 
   let best = null
   let bestScore = threshold - 0.001
 
-  for (let i = 0; i <= contentWords.length - w; i++) {
-    const score = jaccardSimilarity(targetWords, contentWords.slice(i, i + w))
-    if (score > bestScore) {
-      bestScore = score
-      const startChar = contentOffsets[i]
-      const endChar = contentOffsets[i + w - 1] + contentWords[i + w - 1].length
-      const startInfo = findNodeAtCharOffset(textMap.segments, startChar)
-      const endInfo = findNodeAtCharOffset(textMap.segments, endChar)
-      if (startInfo && endInfo) {
-        best = { startNode: startInfo.node, startOffset: startInfo.offset, endNode: endInfo.node, endOffset: endInfo.offset }
+  const minW = Math.max(3, w - 2)
+  const maxW = w + 2
+
+  for (let i = 0; i < contentWords.length; i++) {
+    for (let ww = minW; ww <= maxW; ww++) {
+      if (i + ww > contentWords.length) break
+      const score = jaccardSimilarity(targetWords, contentWords.slice(i, i + ww))
+      if (score > bestScore) {
+        bestScore = score
+        const startChar = contentOffsets[i]
+        const endChar = contentOffsets[i + ww - 1] + contentWords[i + ww - 1].length
+        const startInfo = findNodeAtCharOffset(textMap.segments, startChar)
+        const endInfo = findNodeAtCharOffset(textMap.segments, endChar)
+        if (startInfo && endInfo) {
+          best = { startNode: startInfo.node, startOffset: startInfo.offset, endNode: endInfo.node, endOffset: endInfo.offset }
+        }
       }
     }
   }
@@ -387,6 +395,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'APPLY_HIGHLIGHTS') {
+    // Sync dark mode atomically with highlight application so the tooltip theme
+    // is correct on first hover regardless of SET_DARK_MODE message timing
+    if (typeof message.dark === 'boolean') {
+      document.documentElement.toggleAttribute('data-evident-dark', message.dark)
+    }
     applyHighlights(message.highlights || [])
     sendResponse({ success: true })
     return true

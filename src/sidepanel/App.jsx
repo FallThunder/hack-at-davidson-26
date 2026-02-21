@@ -48,7 +48,7 @@ export function App() {
   const [activeFlag, setActiveFlag] = useState(null)
 
   const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, analysisProgress, error } = useAnalysis()
-  const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags)
+  const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags, darkMode)
 
   const [statusMsgIdx, setStatusMsgIdx] = useState(0)
 

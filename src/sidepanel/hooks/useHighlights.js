@@ -16,15 +16,16 @@ async function sendToContent(message) {
   })
 }
 
-export function useHighlights(flags) {
+export function useHighlights(flags, darkMode) {
   const [highlightsVisible, setHighlightsVisible] = useState(true)
   const [highlightsApplied, setHighlightsApplied] = useState(false)
 
-  // Apply highlights once when flags arrive; only mark applied on confirmed success
+  // Apply highlights once when flags arrive; carry dark mode so the content script
+  // sets the correct theme atomically (avoids race with the separate SET_DARK_MODE message)
   useEffect(() => {
     if (!flags?.length || highlightsApplied) return
     let cancelled = false
-    sendToContent({ type: 'APPLY_HIGHLIGHTS', highlights: flags }).then(response => {
+    sendToContent({ type: 'APPLY_HIGHLIGHTS', highlights: flags, dark: darkMode }).then(response => {
       if (!cancelled && response?.success) setHighlightsApplied(true)
     })
     return () => { cancelled = true }

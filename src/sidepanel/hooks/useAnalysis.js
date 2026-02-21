@@ -66,7 +66,7 @@ function reducer(state, action) {
       return { ...state, notAnArticle: false, status: 'analyzing' }
 
     case 'ERROR':
-      return { ...state, status: 'idle', error: action.payload }
+      return { ...state, status: 'error', error: action.payload }
 
     default:
       return state
@@ -190,8 +190,26 @@ export function useAnalysis() {
         })
         if (runIdRef.current !== runId) return  // stale — discard before even parsing
 
+        if (!res.ok) {
+          clearInterval(pollIntervalRef.current)
+          pollIntervalRef.current = null
+          clearTimeout(slowTimeoutRef.current)
+          slowTimeoutRef.current = null
+          dispatch({ type: 'ERROR', payload: 'The server returned an error. Please try again.' })
+          return
+        }
+
         const data = await res.json()
         if (runIdRef.current !== runId) return  // stale — discard after parsing
+
+        if (data.ready && !data.data) {
+          clearInterval(pollIntervalRef.current)
+          pollIntervalRef.current = null
+          clearTimeout(slowTimeoutRef.current)
+          slowTimeoutRef.current = null
+          dispatch({ type: 'ERROR', payload: 'The server could not analyze this article. Please try again.' })
+          return
+        }
 
         if (data.ready && data.data) {
           clearInterval(pollIntervalRef.current)

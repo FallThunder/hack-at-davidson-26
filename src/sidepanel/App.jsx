@@ -45,7 +45,7 @@ export function App() {
   // Original-array index of the flag that was clicked in the article
   const [activeFlag, setActiveFlag] = useState(null)
 
-  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning } = useAnalysis()
+  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, error } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags)
 
   const [statusMsgIdx, setStatusMsgIdx] = useState(0)
@@ -202,6 +202,25 @@ export function App() {
                   </p>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Analysis error */}
+          {status === 'error' && (
+            <div className="flex flex-col items-center justify-center text-center py-16 px-4 gap-3">
+              <svg className="w-10 h-10 text-red-400 dark:text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10" />
+                <path strokeLinecap="round" d="M12 8v4m0 4h.01" />
+              </svg>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                {error ?? 'An error occurred during analysis.'}
+              </p>
+              <button
+                onClick={() => startAnalysis()}
+                className="mt-1 px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium transition-colors duration-150"
+              >
+                Try again
+              </button>
             </div>
           )}
 

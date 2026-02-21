@@ -26,10 +26,12 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 })
 
 // Also open explicitly when the toolbar icon is clicked (covers first-run and fallback)
-chrome.action.onClicked.addListener(async (tab) => {
+// Do NOT await setOptions before open — awaiting consumes the user gesture token and
+// causes "sidePanel.open() may only be called in response to a user gesture".
+chrome.action.onClicked.addListener((tab) => {
   if (!tab.id) return
-  await chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel/index.html', enabled: true })
-  await chrome.sidePanel.open({ tabId: tab.id })
+  chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel/index.html', enabled: true }).catch(() => {})
+  chrome.sidePanel.open({ tabId: tab.id }).catch(console.error)
 })
 
 // Detect side panel close via long-lived port and clear highlights.

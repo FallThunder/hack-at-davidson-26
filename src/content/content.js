@@ -284,7 +284,30 @@ function applyHighlights(highlights) {
       span.style.setProperty('background-color', URGENCY_BG[u], 'important')
       span.style.setProperty('border-bottom', URGENCY_BORDER[u], 'important')
       span.addEventListener('mouseenter', () => showTooltip(tooltipText, span.getBoundingClientRect()))
-      span.addEventListener('mouseleave', hideTooltip)
+      span.addEventListener('mousemove', (event) => {
+        const rect = span.getBoundingClientRect()
+        const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+        const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height))
+        const xPct = (x * 100).toFixed(1)
+        const yPct = (y * 100).toFixed(1)
+        // Hue cycles through the spectrum as the mouse moves — x drives the main shift,
+        // y adds a secondary rotation so vertical movement also changes the color
+        const hue  = Math.round((x * 280 + y * 120) % 360)
+        const hue2 = (hue + 90) % 360
+        const hue3 = (hue + 200) % 360
+        const gradient = [
+          `radial-gradient(ellipse at ${xPct}% ${yPct}%,`,
+          `  hsla(${hue},100%,72%,0.6),`,
+          `  hsla(${hue2},100%,68%,0.45) 40%,`,
+          `  hsla(${hue3},100%,64%,0.3) 70%,`,
+          `  transparent 92%)`
+        ].join('')
+        span.style.setProperty('background-image', gradient, 'important')
+      })
+      span.addEventListener('mouseleave', () => {
+        span.style.setProperty('background-image', 'none', 'important')
+        hideTooltip()
+      })
       span.addEventListener('click', (event) => {
         event.stopPropagation()
         hideTooltip()

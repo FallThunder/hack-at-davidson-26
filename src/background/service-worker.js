@@ -6,8 +6,13 @@ chrome.runtime.onInstalled.addListener(() => {
 // When the active tab navigates to a new URL, notify the side panel to re-analyze
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!changeInfo.url || !tab.active) return
-  chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {
-    // Side panel may not be open — ignore
+  chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {})
+})
+
+// When the user switches tabs, re-analyze the newly active tab
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  chrome.tabs.get(activeInfo.tabId, (tab) => {
+    chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: tab.url }).catch(() => {})
   })
 })
 
@@ -18,11 +23,13 @@ chrome.action.onClicked.addListener(async (tab) => {
   await chrome.sidePanel.open({ tabId: tab.id })
 })
 
-// Detect side panel close via long-lived port and clear highlights
+// Detect side panel close via long-lived port and clear highlights.
+// Port name is "sidepanel-<windowId>" so we query the exact window's active tab.
 chrome.runtime.onConnect.addListener((port) => {
-  if (port.name !== 'sidepanel') return
+  if (!port.name.startsWith('sidepanel-')) return
+  const windowId = parseInt(port.name.split('-')[1], 10)
   port.onDisconnect.addListener(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, windowId }, (tabs) => {
       const tab = tabs[0]
       if (!tab?.id) return
       chrome.tabs.sendMessage(tab.id, { type: 'CLEAR_HIGHLIGHTS' }).catch(() => {})

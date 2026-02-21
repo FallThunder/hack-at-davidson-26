@@ -40,11 +40,16 @@ export function App() {
     chrome.runtime.sendMessage({ type: 'SET_DARK_MODE', dark: darkMode, target: 'content' })
   }, [darkMode])
 
-  // Open a long-lived port so the service worker can detect when the panel closes
+  // Open a long-lived port so the service worker can detect when the panel closes.
+  // Embed the window ID in the port name so the service worker knows exactly
+  // which window's active tab to clear highlights on disconnect.
   useEffect(() => {
     if (typeof chrome === 'undefined' || !chrome.runtime) return
-    const port = chrome.runtime.connect({ name: 'sidepanel' })
-    return () => port.disconnect()
+    let port
+    chrome.windows.getCurrent(win => {
+      port = chrome.runtime.connect({ name: `sidepanel-${win.id}` })
+    })
+    return () => port?.disconnect()
   }, [])
 
   // Auto-start analysis on mount

@@ -1,0 +1,96 @@
+{
+  "analyzed_at": "2026-02-20T09:14:52Z",
+  "url": "https://townhall.com/columnists/franke-lasee/2026/02/19/why-repealing-the-endangerment-finding-is-a-triumph-for-science-jobs-and-american-families-n2671526",
+  "site_profile": {
+    "domain": "townhall.com",
+    "company": "Townhall Media",
+    "factual_reporting": {
+      "rating": "Mixed",
+      "score": 38
+    },
+    "political_bias": {
+      "rating": "Right",
+      "score": 79
+    }
+  },
+  "content_analysis": {
+    "overall_tone": "Sensationalist",
+    "overall_factuality": "Misleading",
+    "flags": [
+      {
+        "urgency": 2,
+        "flag": "Misleading Framing",
+        "confidence": 0.82,
+        "excerpt": "a regulatory travesty built on climate ideology, politics, and graft, not science",
+        "reasoning": "The 2009 Endangerment Finding was the result of a multi-year scientific review process. Courts upheld its scientific basis in 2012. Characterizing it as built on 'graft' implies corruption with no supporting evidence provided.",
+        "sources": [
+          {
+            "title": "EPA's Endangerment Finding Repeal, Explained",
+            "url": "https://www.wri.org/insights/endangerment-finding-repeal-explained",
+            "publisher": "World Resources Institute"
+          }
+        ]
+      },
+      {
+        "urgency": 2,
+        "flag": "Overly Passive",
+        "confidence": 0.71,
+        "excerpt": "Internal EPA emails, now spotlighted by the Government Accountability & Oversight",
+        "reasoning": "The sentence is left incomplete with no specific claim, source link, or outcome stated. The passive construction obscures what the emails actually show and whether the source cited produced any formal findings.",
+        "sources": []
+      },
+      {
+        "urgency": 3,
+        "flag": "Misleading",
+        "confidence": 0.78,
+        "excerpt": "Obama told us that our electricity rates would skyrocket under his plan. He was right about that.",
+        "reasoning": "U.S. electricity prices have risen due to a range of factors including grid infrastructure investment, natural gas price volatility, and extreme weather events. Attributing price increases primarily to Obama-era climate policy omits these confounding factors and is not supported by energy economics literature.",
+        "sources": [
+          {
+            "title": "Electricity Explained: Factors Affecting Electricity Prices",
+            "url": "https://www.eia.gov/energyexplained/electricity/prices-and-factors-affecting-prices.php",
+            "publisher": "U.S. Energy Information Administration"
+          }
+        ]
+      },
+      {
+        "urgency": 4,
+        "flag": "False",
+        "confidence": 0.91,
+        "excerpt": "White House Press Secretary Karoline Leavitt rightly called it 'the largest deregulatory action in American history,' one that will spare the American people $1.3 trillion in crushing regulations.",
+        "reasoning": "The $1.3 trillion figure originates from the EPA's own press release and has not been independently verified. The calculation includes speculative long-term projections and counts avoided compliance costs as savings, a methodology contested by economists. Multiple independent analyses project net costs to consumers from increased climate damages that are not accounted for in this figure.",
+        "sources": [
+          {
+            "title": "How EPA 'Endangerment Finding' Repeal Could Impact Your Wallet",
+            "url": "https://www.cnbc.com/2026/02/12/epa-endangerment-finding-repeal.html",
+            "publisher": "CNBC"
+          },
+          {
+            "title": "Q&A: What Does Trump's Repeal of US 'Endangerment Finding' Mean for Climate Action?",
+            "url": "https://www.carbonbrief.org/qa-what-does-trumps-repeal-of-us-endangerment-finding-mean-for-climate-action/",
+            "publisher": "Carbon Brief"
+          }
+        ]
+      },
+      {
+        "urgency": 5,
+        "flag": "False",
+        "confidence": 0.96,
+        "excerpt": "CO₂ was never a pollutant",
+        "reasoning": "This claim, attributed approvingly to Interior Secretary Doug Burgum, directly contradicts the 2007 Supreme Court ruling in Massachusetts v. EPA, which held that greenhouse gases including CO₂ qualify as air pollutants under the Clean Air Act. The scientific consensus is that CO₂ is the primary driver of anthropogenic climate change.",
+        "sources": [
+          {
+            "title": "Massachusetts v. EPA, 549 U.S. 497 (2007)",
+            "url": "https://www.supremecourt.gov/opinions/06pdf/05-1120.pdf",
+            "publisher": "Supreme Court of the United States"
+          },
+          {
+            "title": "The Reckless Repeal of the Endangerment Finding",
+            "url": "https://thebulletin.org/2026/02/the-reckless-repeal-of-the-endangerment-finding/",
+            "publisher": "Bulletin of the Atomic Scientists"
+          }
+        ]
+      }
+    ]
+  }
+}

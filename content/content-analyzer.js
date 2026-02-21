@@ -1082,19 +1082,51 @@ class ContentAnalyzer {
         return data;
     }
 
+    // Discover available models from Google's API
+    async discoverAvailableModels() {
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Available models:', data);
+                
+                // Filter for models that support generateContent and are likely free
+                const availableModels = data.models
+                    .filter(model => 
+                        model.supportedGenerationMethods?.includes('generateContent') &&
+                        (model.name.includes('flash') || model.name.includes('pro'))
+                    )
+                    .map(model => `https://generativelanguage.googleapis.com/v1beta/${model.name}:generateContent`);
+                
+                console.log('Filtered available models:', availableModels);
+                return availableModels;
+            }
+        } catch (error) {
+            console.warn('Could not discover models:', error);
+        }
+        return [];
+    }
+
     // Perform AI-powered analysis using Gemini
     async performAIAnalysis(content, articleData) {
         if (!content || !content.mainText || content.mainText.length < 100) {
             throw new Error('Insufficient content for AI analysis');
         }
 
-        // Try different free model endpoints in order of preference
-        const modelEndpoints = [
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
-            'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
-        ];
+        // First try to discover available models
+        let modelEndpoints = await this.discoverAvailableModels();
+        
+        // If discovery failed, use fallback list
+        if (modelEndpoints.length === 0) {
+            console.log('Using fallback model list');
+            modelEndpoints = [
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent',
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b-latest:generateContent',
+                'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-8b:generateContent',
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+                'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent'
+            ];
+        }
 
         for (let i = 0; i < modelEndpoints.length; i++) {
             try {

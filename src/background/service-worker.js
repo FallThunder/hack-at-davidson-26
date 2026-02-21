@@ -1,12 +1,13 @@
-// Open the Evident side panel when the toolbar icon is clicked
-chrome.action.onClicked.addListener(async (tab) => {
+// Open the Evident side panel when the toolbar icon is clicked.
+// Must call open() synchronously (before any await) or Chrome rejects: "may only be called in response to a user gesture"
+chrome.action.onClicked.addListener((tab) => {
   if (!tab.id) return
-  await chrome.sidePanel.setOptions({
+  chrome.sidePanel.open({ tabId: tab.id })
+  chrome.sidePanel.setOptions({
     tabId: tab.id,
     path: 'sidepanel/index.html',
     enabled: true
-  })
-  await chrome.sidePanel.open({ tabId: tab.id })
+  }).catch(() => {})
 })
 
 // Relay messages: side panel sends { target: 'content', ...rest }

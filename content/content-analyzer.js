@@ -744,8 +744,8 @@ class ContentAnalyzer {
             wordCount: 0
         };
 
-        // Extract title
-        content.title = document.title || '';
+        // Extract title - prioritize the main article title
+        content.title = this.extractArticleTitle(articleElement);
         
         // Try to find subtitle/deck
         const subtitleSelectors = [
@@ -808,11 +808,18 @@ class ContentAnalyzer {
         return content;
     }
 
-    // Find the main article element using multiple strategies (improved for news sites)
+    // Find the main article element - prioritize the PRIMARY article user is reading
     findMainArticleElement() {
-        console.log('Finding main article element...');
+        console.log('Finding primary article element...');
         
-        // Strategy 1: Try semantic HTML first with validation
+        // Strategy 1: Look for the primary article (usually first, largest, most prominent)
+        const primaryArticle = this.findPrimaryArticle();
+        if (primaryArticle) {
+            console.log('Found primary article');
+            return primaryArticle;
+        }
+
+        // Strategy 2: Try semantic HTML first with validation (first valid one)
         const articles = document.querySelectorAll('article');
         for (const article of articles) {
             if (this.isMainArticleCandidate(article)) {
@@ -821,7 +828,7 @@ class ContentAnalyzer {
             }
         }
 
-        // Strategy 2: Try news-specific selectors
+        // Strategy 3: Try news-specific selectors (first match only)
         const newsSelectors = [
             '[role="article"]',
             '.article-content', '.story-content', '.article-body',
@@ -842,26 +849,191 @@ class ContentAnalyzer {
             }
         }
 
-        // Strategy 3: Find element with best content characteristics
-        const candidates = document.querySelectorAll('div, section, main, article');
-        let bestCandidate = null;
-        let bestScore = 0;
+        console.warn('No suitable main article element found');
+        return null;
+    }
 
-        candidates.forEach(candidate => {
-            const score = this.scoreArticleCandidate(candidate);
-            if (score > bestScore && score > 100) { // Minimum threshold
-                bestScore = score;
-                bestCandidate = candidate;
+    // Find the primary article that the user is actually reading
+    findPrimaryArticle() {
+        // Look for articles in the main content area (not sidebars)
+        const mainContentSelectors = [
+            'main', '[role="main"]', '#main', '.main', 
+            '#content', '.content', '#primary', '.primary',
+            '.main-content', '.primary-content'
+        ];
+
+        for (const selector of mainContentSelectors) {
+            const mainArea = document.querySelector(selector);
+            if (mainArea) {
+                // Find the first substantial article within the main content area
+                const articlesInMain = mainArea.querySelectorAll('article, .article, [role="article"]');
+                for (const article of articlesInMain) {
+                    if (this.isPrimaryArticleCandidate(article)) {
+                        console.log(`Found primary article in main content area: ${selector}`);
+                        return article;
+                    }
+                }
+            }
+        }
+
+        // Look for the largest article by content (likely the main one user is reading)
+        const allArticles = document.querySelectorAll('article, .article, [role="article"]');
+        let largestArticle = null;
+        let maxContentScore = 0;
+
+        allArticles.forEach((article, index) => {
+            // Prioritize articles that appear earlier in the DOM (usually main content)
+            const positionBonus = Math.max(0, 100 - (index * 10));
+            const contentScore = this.calculatePrimaryArticleScore(article) + positionBonus;
+            
+            if (contentScore > maxContentScore && contentScore > 200) {
+                maxContentScore = contentScore;
+                largestArticle = article;
             }
         });
 
-        if (bestCandidate) {
-            console.log(`Found main article via scoring (score: ${bestScore})`);
-            return bestCandidate;
+        if (largestArticle) {
+            console.log(`Found primary article by content size (score: ${maxContentScore})`);
+            return largestArticle;
         }
 
-        console.warn('No suitable main article element found');
         return null;
+    }
+
+    // Check if element is the primary article (not a recommended/related article)
+    isPrimaryArticleCandidate(element) {
+        if (!element || element.textContent.length < 500) return false;
+        
+        // Strong exclusion patterns for recommended/related articles
+        const excludePatterns = [
+            /recommend|related|suggested|trending|popular|more-stories/i,
+            /sidebar|aside|secondary|rail|widget/i,
+            /comments?|social|share|footer|header|nav/i,
+            /advertisement|ads?|promo|sponsored/i,
+            /newsletter|subscribe|signup|follow/i,
+            /also-read|you-may-like|dont-miss|must-read/i
+        ];
+        
+        const className = element.className || '';
+        const id = element.id || '';
+        const parentClasses = element.parentElement?.className || '';
+        const combined = className + ' ' + id + ' ' + parentClasses;
+        
+        // Exclude if matches exclusion patterns
+        if (excludePatterns.some(pattern => pattern.test(combined))) {
+            return false;
+        }
+        
+        // Must have substantial paragraph content
+        const paragraphs = element.querySelectorAll('p');
+        const substantialParagraphs = Array.from(paragraphs).filter(p => 
+            p.textContent.trim().length > 80 // Higher threshold for primary content
+        ).length;
+        
+        return substantialParagraphs >= 5; // Higher threshold for primary article
+    }
+
+    // Calculate score for primary article detection
+    calculatePrimaryArticleScore(element) {
+        if (!element) return 0;
+        
+        let score = 0;
+        const text = element.textContent || '';
+        const textLength = text.length;
+        
+        // Heavy weight on content length for primary articles
+        score += Math.min(textLength / 5, 500); // Up to 500 points for length
+        
+        // Paragraph quality analysis
+        const paragraphs = element.querySelectorAll('p');
+        const substantialParagraphs = Array.from(paragraphs).filter(p => {
+            const pText = p.textContent.trim();
+            return pText.length > 80 && pText.length < 3000; // Primary content paragraphs
+        });
+        
+        score += substantialParagraphs.length * 30; // Higher weight for paragraphs
+        
+        // Bonus for article-like structure
+        const headings = element.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        if (headings.length > 0 && headings.length < 8) score += 50;
+        
+        // Penalize high link density (indicates navigation/recommendations)
+        const links = element.querySelectorAll('a');
+        const linkDensity = links.length / Math.max(textLength / 200, 1);
+        if (linkDensity > 3) score -= 200; // Strong penalty for high link density
+        
+        // Check for primary content indicators
+        const className = element.className || '';
+        const id = element.id || '';
+        const combined = (className + ' ' + id).toLowerCase();
+        
+        // Strong bonus for primary content indicators
+        if (/main|primary|article-body|story-body|content-body/i.test(combined)) {
+            score += 100;
+        }
+        
+        // Strong penalty for secondary content indicators
+        if (/recommend|related|sidebar|aside|secondary/i.test(combined)) {
+            score -= 300;
+        }
+        
+        return score;
+    }
+
+    // Extract the title of the main article (not page title which might be generic)
+    extractArticleTitle(articleElement) {
+        // Strategy 1: Look for title within the article element
+        if (articleElement) {
+            const titleSelectors = [
+                'h1', '.headline', '.title', '.article-title', 
+                '.story-title', '.entry-title', '.post-title',
+                '[data-testid="headline"]', '[data-cy="headline"]'
+            ];
+            
+            for (const selector of titleSelectors) {
+                const titleElement = articleElement.querySelector(selector);
+                if (titleElement && titleElement.textContent.trim().length > 10) {
+                    console.log(`Found article title via selector: ${selector}`);
+                    return titleElement.textContent.trim();
+                }
+            }
+        }
+
+        // Strategy 2: Look for main headline in document
+        const mainTitleSelectors = [
+            'h1', '.headline', '.main-headline', '.article-headline',
+            '[role="heading"][aria-level="1"]'
+        ];
+        
+        for (const selector of mainTitleSelectors) {
+            const titleElement = document.querySelector(selector);
+            if (titleElement && titleElement.textContent.trim().length > 10) {
+                // Make sure it's not in a sidebar or recommended section
+                const parentText = titleElement.closest('[class*="sidebar"], [class*="recommend"], [class*="related"]');
+                if (!parentText) {
+                    console.log(`Found main title via selector: ${selector}`);
+                    return titleElement.textContent.trim();
+                }
+            }
+        }
+
+        // Strategy 3: Use page title as fallback but clean it up
+        const pageTitle = document.title || '';
+        if (pageTitle) {
+            // Remove common site suffixes
+            const cleanTitle = pageTitle
+                .replace(/\s*[-|–]\s*.+$/, '') // Remove " - Site Name" or " | Site Name"
+                .replace(/\s*\|\s*.+$/, '')
+                .trim();
+            
+            if (cleanTitle.length > 10) {
+                console.log('Using cleaned page title');
+                return cleanTitle;
+            }
+        }
+
+        console.warn('Could not find article title');
+        return pageTitle || 'Unknown Article';
     }
 
     // Check if element is a good main article candidate

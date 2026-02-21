@@ -1,0 +1,109 @@
+{
+  "analyzed_at": "2026-02-21T00:00:00Z",
+  "url": "https://www.foxnews.com/media/scott-bessent-says-supreme-court-strengthened-trump-draconian-move-despite-ruling-tariffs",
+  "site_profile": {
+    "domain": "foxnews.com",
+    "company": "Fox News Media / Fox Corporation",
+    "factual_reporting": {
+      "rating": "Low",
+      "score": 25
+    },
+    "political_bias": {
+      "rating": "Right",
+      "score": 82
+    }
+  },
+  "content_analysis": {
+    "overall_tone": "Analytical",
+    "overall_factuality": "Mostly Factual",
+    "flags": [
+      {
+        "urgency": 4,
+        "flag": "Misleading",
+        "confidence": 0.90,
+        "excerpt": "nothing has changed for revenue goals",
+        "reasoning": "Bessent's claim that tariff revenue will be 'virtually unchanged' relies on replacing IEEPA tariffs with Section 122 authority, which is capped at 15% and expires after 150 days unless Congress votes to extend it. The article does not convey these critical statutory limitations, creating a materially false impression that revenues are secure on the same terms. In reality, Section 122 is a time-limited and rate-capped fallback that represents a significant structural downgrade from IEEPA authority.",
+        "sources": [
+          {
+            "title": "Sections 122 and 301: Trump's alternate tariff tools after Supreme Court ruling",
+            "url": "https://thehill.com/business/trade/5748172-trump-tariffs-section-301/",
+            "publisher": "The Hill"
+          },
+          {
+            "title": "Trump's new tariffs plan: How Section 122 and the 10% shift works",
+            "url": "https://www.axios.com/2026/02/20/trump-tariff-plan-section-122-trade-act",
+            "publisher": "Axios"
+          }
+        ]
+      },
+      {
+        "urgency": 4,
+        "flag": "Misleading Framing",
+        "confidence": 0.85,
+        "excerpt": "Supreme Court reaffirmed that the president has… the draconian alternative",
+        "reasoning": "The article frames the embargo power as a newly 'reaffirmed' and enhanced presidential tool. However, the court's ruling did not affirmatively expand or reaffirm presidential embargo power — it struck down IEEPA tariff authority. The majority opinion did not address embargo powers at all; Bessent's interpretation extrapolates from what the court did NOT prohibit rather than what it endorsed. Presenting this as a Supreme Court 'reaffirmation' of embargo authority mischaracterizes the ruling's scope.",
+        "sources": [
+          {
+            "title": "Supreme Court strikes down tariffs — SCOTUSblog",
+            "url": "https://www.scotusblog.com/2026/02/supreme-court-strikes-down-tariffs/",
+            "publisher": "SCOTUSblog"
+          },
+          {
+            "title": "Supreme Court strikes down Trump tariffs, rebuking president's signature economic policy",
+            "url": "https://www.cnbc.com/2026/02/20/supreme-court-trump-tariffs-ruling.html",
+            "publisher": "CNBC"
+          }
+        ]
+      },
+      {
+        "urgency": 3,
+        "flag": "Missing Context",
+        "confidence": 0.92,
+        "excerpt": "Within three days, the President can put on the Section 122 10% global tariff",
+        "reasoning": "The article quotes Bessent's claim without noting key limitations: Section 122 tariffs are capped at 15% and automatically expire after 150 days unless Congress votes to extend them. The article also omits that Section 122 has never before been invoked to impose tariffs. These are material facts that significantly affect the credibility of Bessent's assertion that revenue will be 'virtually unchanged.'",
+        "sources": [
+          {
+            "title": "How Trump's Tariffs Could Survive the Supreme Court Ruling",
+            "url": "https://www.cfr.org/articles/how-trumps-tariffs-could-survive-the-supreme-court-ruling",
+            "publisher": "Council on Foreign Relations"
+          },
+          {
+            "title": "Congressional and Presidential Authority to Impose Import Tariffs",
+            "url": "https://www.congress.gov/crs_external_products/R/PDF/R48435/R48435.1.pdf",
+            "publisher": "Congressional Research Service / Congress.gov"
+          }
+        ]
+      },
+      {
+        "urgency": 3,
+        "flag": "Missing Context",
+        "confidence": 0.87,
+        "excerpt": "Trump called the Supreme Court's ruling 'deeply disappointing' and said he is 'ashamed' of the six justices",
+        "reasoning": "The article reports Trump's emotional attack on the justices without noting that the 6-3 majority included three of his own conservative appointees (Gorsuch and Barrett joined Roberts), and that the dissent was written by Kavanaugh — a fact that materially undercuts any implication of partisan judicial bias. Without this context, readers may incorrectly infer the majority was composed of liberal or non-Trump-appointed justices.",
+        "sources": [
+          {
+            "title": "Supreme Court strikes down most of Trump's tariffs in a major blow to the president",
+            "url": "https://www.nbcnews.com/politics/supreme-court/supreme-court-strikes-trumps-tariffs-major-blow-president-rcna244827",
+            "publisher": "NBC News"
+          }
+        ]
+      },
+      {
+        "urgency": 2,
+        "flag": "Loaded Language",
+        "confidence": 0.72,
+        "excerpt": "deals major blow",
+        "reasoning": "The phrase 'major blow' in the headline and article is an editorializing characterization rather than neutral description. While the ruling is significant, the language amplifies the adversarial framing rather than describing the legal outcome neutrally (e.g., 'struck down' or 'ruled against').",
+        "sources": []
+      },
+      {
+        "urgency": 2,
+        "flag": "Overly Passive",
+        "confidence": 0.62,
+        "excerpt": "Bessent said one aspect of the ruling could strengthen Trump's leverage",
+        "reasoning": "The article attributes speculative benefit to the ruling without seeking any independent legal or economic analysis to assess whether Bessent's characterization is credible. The passive framing presents a politically interested party's spin as a reasonable interpretation without challenge or attribution to alternative expert views.",
+        "sources": []
+      }
+    ]
+  }
+}

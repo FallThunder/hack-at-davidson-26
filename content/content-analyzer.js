@@ -4,6 +4,12 @@ class ContentAnalyzer {
         // Gemini AI API configuration
         this.apiKey = 'AIzaSyD05HamtdStA4CGTrPmAfxG4L-R3LfYJ68';
         this.apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+        
+        // Rate limiting and quota management
+        this.lastApiCall = 0;
+        this.minCallInterval = 2000; // 2 seconds between calls
+        this.quotaExhausted = false;
+        this.quotaResetTime = null;
         this.newsIndicators = {
             // Common news article selectors
             selectors: [
@@ -1107,24 +1113,73 @@ class ContentAnalyzer {
         return [];
     }
 
+    // Check if we should skip AI analysis due to quota limits
+    shouldSkipAIAnalysis() {
+        if (this.quotaExhausted && this.quotaResetTime) {
+            const now = Date.now();
+            if (now < this.quotaResetTime) {
+                const minutesLeft = Math.ceil((this.quotaResetTime - now) / 60000);
+                console.log(`Quota exhausted. Skipping AI analysis. Reset in ${minutesLeft} minutes.`);
+                return true;
+            } else {
+                // Reset quota status
+                this.quotaExhausted = false;
+                this.quotaResetTime = null;
+                console.log('Quota reset time reached. Re-enabling AI analysis.');
+            }
+        }
+        return false;
+    }
+
+    // Implement rate limiting
+    async waitForRateLimit() {
+        const now = Date.now();
+        const timeSinceLastCall = now - this.lastApiCall;
+        
+        if (timeSinceLastCall < this.minCallInterval) {
+            const waitTime = this.minCallInterval - timeSinceLastCall;
+            console.log(`Rate limiting: waiting ${waitTime}ms before API call`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        this.lastApiCall = Date.now();
+    }
+
+    // Handle quota exhaustion errors
+    handleQuotaError(error, retryDelay) {
+        console.warn('Quota exhausted:', error);
+        this.quotaExhausted = true;
+        
+        // Parse retry delay from error (in seconds) and add buffer
+        const delaySeconds = retryDelay || 60; // Default 1 minute if no delay specified
+        this.quotaResetTime = Date.now() + (delaySeconds * 1000) + 60000; // Add 1 minute buffer
+        
+        console.log(`Quota exhausted. Will retry AI analysis in ${Math.ceil(delaySeconds/60)} minutes.`);
+    }
+
     // Perform AI-powered analysis using Gemini
     async performAIAnalysis(content, articleData) {
         if (!content || !content.mainText || content.mainText.length < 100) {
             throw new Error('Insufficient content for AI analysis');
         }
 
+        // Check if we should skip due to quota limits
+        if (this.shouldSkipAIAnalysis()) {
+            throw new Error('AI analysis temporarily disabled due to quota limits');
+        }
+
+        // Implement rate limiting
+        await this.waitForRateLimit();
+
         // First try to discover available models
         let modelEndpoints = await this.discoverAvailableModels();
         
-        // If discovery failed, use fallback list
+        // If discovery failed, use fallback list (prioritize lighter models to save quota)
         if (modelEndpoints.length === 0) {
             console.log('Using fallback model list');
             modelEndpoints = [
                 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent',
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b-latest:generateContent',
-                'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-8b:generateContent',
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-                'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent'
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
             ];
         }
 
@@ -1160,6 +1215,18 @@ class ContentAnalyzer {
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.warn(`Model endpoint ${i + 1} failed:`, errorText);
+                    
+                    // Handle quota exhaustion specifically
+                    if (response.status === 429) {
+                        try {
+                            const errorData = JSON.parse(errorText);
+                            const retryDelay = errorData.details?.find(d => d['@type']?.includes('RetryInfo'))?.retryDelay;
+                            const delaySeconds = retryDelay ? parseInt(retryDelay.replace('s', '')) : 60;
+                            this.handleQuotaError(errorData, delaySeconds);
+                        } catch (e) {
+                            this.handleQuotaError(errorText, 60);
+                        }
+                    }
                     
                     // If this is the last endpoint, throw the error
                     if (i === modelEndpoints.length - 1) {
@@ -1197,51 +1264,27 @@ class ContentAnalyzer {
         }
     }
 
-    // Build comprehensive analysis prompt for AI
+    // Build comprehensive analysis prompt for AI (optimized for quota)
     buildAnalysisPrompt(content, articleData) {
-        const author = articleData?.author || 'Unknown';
-        const publisher = articleData?.publisher || 'Unknown';
         const title = content.title || 'No title';
+        const publisher = articleData?.publisher || 'Unknown';
         
-        return `You are Evident, an expert fact-checker and bias analyst. Analyze this news article for political bias, emotional manipulation, and factual claims that need verification.
+        // Reduce text size to save tokens
+        const textSample = content.mainText.substring(0, 1500);
+        
+        return `Analyze this article for bias and fact-checking:
 
-ARTICLE DETAILS:
 Title: ${title}
-Author: ${author}
 Publisher: ${publisher}
-Word Count: ${content.wordCount}
+Text: ${textSample}
 
-ARTICLE TEXT:
-${content.mainText.substring(0, 3000)}
-
-Please provide your analysis in the following JSON format:
-
+Return JSON:
 {
-  "biasAnalysis": {
-    "politicalBias": "neutral|left-leaning|right-leaning",
-    "politicalScore": 0-100,
-    "reasoning": "Brief explanation of political bias assessment"
-  },
-  "emotionalAnalysis": {
-    "manipulationRisk": "low|medium|high",
-    "emotionalIntensity": 0-100,
-    "patterns": ["list of emotional manipulation patterns found"],
-    "reasoning": "Brief explanation of emotional analysis"
-  },
-  "factCheckingData": {
-    "numericalClaims": ["list of specific numerical claims to verify"],
-    "factualClaims": ["list of factual statements that should be verified"],
-    "sources": ["list of sources mentioned that should be verified"],
-    "credibilityScore": 0-100
-  },
-  "insights": {
-    "overallAssessment": "Brief overall assessment of article quality and trustworthiness",
-    "redFlags": ["list of concerning elements"],
-    "strengths": ["list of positive journalistic elements"]
-  }
-}
-
-Focus on being objective and providing specific examples from the text to support your analysis.`;
+  "biasAnalysis": {"politicalBias": "neutral|left-leaning|right-leaning", "politicalScore": 0-100, "reasoning": "brief explanation"},
+  "emotionalAnalysis": {"manipulationRisk": "low|medium|high", "emotionalIntensity": 0-100, "reasoning": "brief explanation"},
+  "factCheckingData": {"numericalClaims": [], "factualClaims": [], "credibilityScore": 0-100},
+  "insights": {"overallAssessment": "brief assessment", "redFlags": [], "strengths": []}
+}`;
     }
 
     // Parse AI response and structure the data

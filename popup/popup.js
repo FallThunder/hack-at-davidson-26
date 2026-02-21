@@ -76,8 +76,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Error loading page analysis:', error);
-            showError('Extension not ready on this page');
-            updateStatus('Analysis error', 'error');
+            
+            // Handle quota exhaustion specifically
+            if (error.message && error.message.includes('quota')) {
+                showError('AI quota temporarily exhausted. Using pattern-based analysis. Try again later.');
+                updateStatus('Quota limit reached', 'error');
+            } else {
+                showError('Extension not ready on this page');
+                updateStatus('Analysis error', 'error');
+            }
         }
     }
 

@@ -125,12 +125,6 @@ class ContentAnalyzer {
         analysis.popularityScore = popularityAnalysis.score;
         analysis.siteMetrics = popularityAnalysis.metrics;
 
-        // Cache the result
-        this.cache.set(cacheKey, {
-            data: analysis,
-            timestamp: Date.now()
-        });
-
         // Extract main content for AI analysis
         analysis.mainContent = this.extractMainContent();
         
@@ -143,11 +137,36 @@ class ContentAnalyzer {
             analysis.aiInsights = aiAnalysis.insights;
         } catch (error) {
             console.warn('AI analysis failed, falling back to pattern matching:', error);
-            // Fallback to pattern-based analysis
-            analysis.biasAnalysis = this.analyzeBias(analysis.mainContent);
-            analysis.emotionalAnalysis = this.analyzeEmotionalLanguage(analysis.mainContent);
-            analysis.factCheckingData = this.extractFactCheckingData();
+            // Fallback to basic analysis
+            analysis.biasAnalysis = {
+                politicalBias: 'neutral',
+                politicalScore: 0,
+                reasoning: 'AI analysis unavailable - using fallback'
+            };
+            analysis.emotionalAnalysis = {
+                manipulationRisk: 'low',
+                emotionalIntensity: 0,
+                patterns: [],
+                reasoning: 'AI analysis unavailable - using fallback'
+            };
+            analysis.factCheckingData = {
+                numericalClaims: [],
+                factualClaims: [],
+                sources: [],
+                credibilityScore: 50
+            };
+            analysis.aiInsights = {
+                overallAssessment: 'Analysis failed - please try again',
+                redFlags: [],
+                strengths: []
+            };
         }
+
+        // Cache the complete result
+        this.cache.set(cacheKey, {
+            data: analysis,
+            timestamp: Date.now()
+        });
 
         return analysis;
     }
@@ -718,7 +737,7 @@ class ContentAnalyzer {
             // Extract paragraphs
             const paragraphs = articleElement.querySelectorAll('p');
             paragraphs.forEach(p => {
-                const text = p.textContent.trim();
+                const text = p.textContent?.trim() || '';
                 if (text.length > 20) { // Filter out very short paragraphs
                     content.paragraphs.push(text);
                 }
@@ -744,7 +763,15 @@ class ContentAnalyzer {
 
             // Combine all text
             content.mainText = content.paragraphs.join(' ');
-            content.wordCount = content.mainText.split(/\s+/).length;
+            content.wordCount = content.mainText ? content.mainText.split(/\s+/).filter(word => word.length > 0).length : 0;
+        } else {
+            // Fallback: try to get text from the entire page
+            console.warn('No main article element found, using fallback content extraction');
+            const bodyText = document.body?.textContent || '';
+            const paragraphs = bodyText.split('\n').filter(p => p.trim().length > 50);
+            content.paragraphs = paragraphs.slice(0, 10); // Limit to first 10 substantial paragraphs
+            content.mainText = content.paragraphs.join(' ');
+            content.wordCount = content.mainText ? content.mainText.split(/\s+/).filter(word => word.length > 0).length : 0;
         }
 
         return content;
@@ -1057,42 +1084,57 @@ class ContentAnalyzer {
 
     // Perform AI-powered analysis using Gemini
     async performAIAnalysis(content, articleData) {
-        if (!content.mainText || content.mainText.length < 100) {
+        if (!content || !content.mainText || content.mainText.length < 100) {
             throw new Error('Insufficient content for AI analysis');
         }
 
-        const prompt = this.buildAnalysisPrompt(content, articleData);
-        
-        const requestBody = {
-            contents: [{
-                parts: [{
-                    text: prompt
-                }]
-            }],
-            generationConfig: {
-                temperature: 0.1,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 1024,
+        try {
+            const prompt = this.buildAnalysisPrompt(content, articleData);
+            
+            const requestBody = {
+                contents: [{
+                    parts: [{
+                        text: prompt
+                    }]
+                }],
+                generationConfig: {
+                    temperature: 0.1,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 1024,
+                }
+            };
+
+            console.log('Sending AI analysis request...');
+            const response = await fetch(`${this.apiEndpoint}?key=${this.apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('AI API error response:', errorText);
+                throw new Error(`AI API request failed: ${response.status} - ${errorText}`);
             }
-        };
 
-        const response = await fetch(`${this.apiEndpoint}?key=${this.apiKey}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-            throw new Error(`AI API request failed: ${response.status}`);
+            const data = await response.json();
+            console.log('AI API response received:', data);
+            
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                throw new Error('Invalid AI response structure');
+            }
+            
+            const aiResponse = data.candidates[0].content.parts[0].text;
+            console.log('AI response text:', aiResponse);
+            
+            return this.parseAIResponse(aiResponse);
+        } catch (error) {
+            console.error('AI analysis error:', error);
+            throw error;
         }
-
-        const data = await response.json();
-        const aiResponse = data.candidates[0].content.parts[0].text;
-        
-        return this.parseAIResponse(aiResponse);
     }
 
     // Build comprehensive analysis prompt for AI

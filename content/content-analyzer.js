@@ -134,7 +134,21 @@ class ContentAnalyzer {
         analysis.siteMetrics = popularityAnalysis.metrics;
 
         // Extract main content for AI analysis
-        analysis.mainContent = this.extractMainContent();
+        try {
+            analysis.mainContent = this.extractMainContent();
+            console.log('Main content extracted:', analysis.mainContent ? 'Success' : 'Failed');
+        } catch (error) {
+            console.error('Error extracting main content:', error);
+            analysis.mainContent = {
+                title: document.title || 'Unknown',
+                mainText: '',
+                paragraphs: [],
+                quotes: [],
+                claims: [],
+                sources: [],
+                wordCount: 0
+            };
+        }
         
         // Check if AI should be attempted or skip to pattern analysis
         const shouldTryAI = !this.quotaExhausted && analysis.mainContent.mainText.length > 200;
@@ -733,6 +747,8 @@ class ContentAnalyzer {
 
     // Extract main content from the page for analysis
     extractMainContent() {
+        console.log('Starting main content extraction...');
+        
         const content = {
             title: '',
             subtitle: '',
@@ -743,6 +759,14 @@ class ContentAnalyzer {
             sources: [],
             wordCount: 0
         };
+
+        // Check if this is a CNN live blog or special page type
+        const isLiveBlog = this.isLiveBlogPage();
+        console.log('Is live blog page:', isLiveBlog);
+
+        // Find main article content
+        const articleElement = isLiveBlog ? this.findLiveBlogContent() : this.findMainArticleElement();
+        console.log('Article element found:', !!articleElement, 'Type:', isLiveBlog ? 'live-blog' : 'article');
 
         // Extract title - prioritize the main article title
         content.title = this.extractArticleTitle(articleElement);
@@ -765,47 +789,104 @@ class ContentAnalyzer {
         // Find main article content
         const articleElement = this.findMainArticleElement();
         if (articleElement) {
-            // Extract paragraphs
-            const paragraphs = articleElement.querySelectorAll('p');
-            paragraphs.forEach(p => {
-                const text = p.textContent?.trim() || '';
-                if (text.length > 20) { // Filter out very short paragraphs
-                    content.paragraphs.push(text);
-                }
-            });
-
-            // Extract quotes
-            const quoteSelectors = ['blockquote', '.quote', '.pullquote', 'q'];
-            quoteSelectors.forEach(selector => {
-                const quotes = articleElement.querySelectorAll(selector);
-                quotes.forEach(quote => {
-                    const text = quote.textContent.trim();
-                    if (text.length > 10) {
-                        content.quotes.push(text);
+            try {
+                // Extract paragraphs
+                const paragraphs = articleElement.querySelectorAll('p');
+                paragraphs.forEach(p => {
+                    const text = p.textContent?.trim() || '';
+                    if (text.length > 20) { // Filter out very short paragraphs
+                        content.paragraphs.push(text);
                     }
                 });
-            });
+                console.log(`Extracted ${content.paragraphs.length} paragraphs`);
 
-            // Extract potential claims (sentences with strong assertions)
-            content.claims = this.extractClaims(content.paragraphs);
+                // Extract quotes
+                const quoteSelectors = ['blockquote', '.quote', '.pullquote', 'q'];
+                quoteSelectors.forEach(selector => {
+                    try {
+                        const quotes = articleElement.querySelectorAll(selector);
+                        quotes.forEach(quote => {
+                            const text = quote.textContent.trim();
+                            if (text.length > 10) {
+                                content.quotes.push(text);
+                            }
+                        });
+                    } catch (e) {
+                        console.warn(`Error extracting quotes with selector ${selector}:`, e);
+                    }
+                });
 
-            // Extract sources and links
-            content.sources = this.extractSources(articleElement);
+                // Extract potential claims (sentences with strong assertions)
+                try {
+                    content.claims = this.extractClaims(content.paragraphs);
+                    console.log(`Extracted ${content.claims.length} claims`);
+                } catch (e) {
+                    console.warn('Error extracting claims:', e);
+                    content.claims = [];
+                }
 
-            // Combine all text
-            content.mainText = content.paragraphs.join(' ');
-            content.wordCount = content.mainText ? content.mainText.split(/\s+/).filter(word => word.length > 0).length : 0;
+                // Extract sources and links
+                try {
+                    content.sources = this.extractSources(articleElement);
+                    console.log(`Extracted ${content.sources.length} sources`);
+                } catch (e) {
+                    console.warn('Error extracting sources:', e);
+                    content.sources = [];
+                }
+
+                // Combine all text
+                content.mainText = content.paragraphs.join(' ');
+                content.wordCount = content.mainText ? content.mainText.split(/\s+/).filter(word => word.length > 0).length : 0;
+                console.log(`Total word count: ${content.wordCount}`);
+                
+            } catch (error) {
+                console.error('Error processing article element:', error);
+                // Use fallback extraction
+                this.useFallbackExtraction(content);
+            }
         } else {
             // Fallback: try to get text from the entire page
             console.warn('No main article element found, using fallback content extraction');
-            const bodyText = document.body?.textContent || '';
-            const paragraphs = bodyText.split('\n').filter(p => p.trim().length > 50);
-            content.paragraphs = paragraphs.slice(0, 10); // Limit to first 10 substantial paragraphs
-            content.mainText = content.paragraphs.join(' ');
-            content.wordCount = content.mainText ? content.mainText.split(/\s+/).filter(word => word.length > 0).length : 0;
+            this.useFallbackExtraction(content);
         }
 
         return content;
+    }
+
+    // Fallback content extraction when main article detection fails
+    useFallbackExtraction(content) {
+        try {
+            console.log('Using fallback content extraction');
+            const bodyText = document.body?.textContent || '';
+            
+            if (bodyText.length > 0) {
+                const paragraphs = bodyText.split('\n')
+                    .map(p => p.trim())
+                    .filter(p => p.length > 50 && p.length < 2000) // Reasonable paragraph length
+                    .slice(0, 15); // Limit to first 15 substantial paragraphs
+                
+                content.paragraphs = paragraphs;
+                content.mainText = paragraphs.join(' ');
+                content.wordCount = content.mainText ? content.mainText.split(/\s+/).filter(word => word.length > 0).length : 0;
+                
+                // Try to extract some basic claims from the text
+                try {
+                    content.claims = this.extractClaims(content.paragraphs);
+                } catch (e) {
+                    content.claims = [];
+                }
+                
+                console.log(`Fallback extraction: ${content.paragraphs.length} paragraphs, ${content.wordCount} words`);
+            } else {
+                console.warn('No content found in document body');
+                content.mainText = 'No content available';
+                content.wordCount = 0;
+            }
+        } catch (error) {
+            console.error('Error in fallback extraction:', error);
+            content.mainText = 'Content extraction failed';
+            content.wordCount = 0;
+        }
     }
 
     // Find the main article element - prioritize the PRIMARY article user is reading
@@ -1034,6 +1115,74 @@ class ContentAnalyzer {
 
         console.warn('Could not find article title');
         return pageTitle || 'Unknown Article';
+    }
+
+    // Check if this is a live blog page
+    isLiveBlogPage() {
+        const url = window.location.href.toLowerCase();
+        const title = document.title.toLowerCase();
+        
+        // Check URL patterns for live blogs
+        if (url.includes('/live-news/') || 
+            url.includes('/live-updates/') || 
+            url.includes('/live/') ||
+            title.includes('live') ||
+            title.includes('updates')) {
+            return true;
+        }
+        
+        // Check for live blog indicators in the page
+        const liveBlogSelectors = [
+            '[data-component="LiveBlog"]',
+            '.live-blog',
+            '.live-updates',
+            '[class*="live"]'
+        ];
+        
+        return liveBlogSelectors.some(selector => document.querySelector(selector));
+    }
+
+    // Find content for live blog pages
+    findLiveBlogContent() {
+        console.log('Finding live blog content...');
+        
+        // Try live blog specific selectors
+        const liveBlogSelectors = [
+            '[data-component="LiveBlog"]',
+            '.live-blog-content',
+            '.live-updates-content',
+            '.live-blog',
+            '.live-updates'
+        ];
+        
+        for (const selector of liveBlogSelectors) {
+            const element = document.querySelector(selector);
+            if (element && element.textContent.length > 200) {
+                console.log(`Found live blog content via: ${selector}`);
+                return element;
+            }
+        }
+        
+        // Fallback to looking for the main content area
+        const mainContentSelectors = [
+            'main',
+            '[role="main"]',
+            '#main-content',
+            '.main-content',
+            '.content'
+        ];
+        
+        for (const selector of mainContentSelectors) {
+            const element = document.querySelector(selector);
+            if (element && element.textContent.length > 300) {
+                console.log(`Found live blog content via main area: ${selector}`);
+                return element;
+            }
+        }
+        
+        // Last resort: use body but try to filter out navigation
+        console.log('Using document body as fallback for live blog');
+        return document.body;
     }
 
     // Check if element is a good main article candidate

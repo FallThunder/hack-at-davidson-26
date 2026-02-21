@@ -3,14 +3,17 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error)
 })
 
-// Notify the side panel to re-analyze on URL change or page refresh.
+// Close the side panel when the user navigates to a new URL (different article).
+// Same-URL refreshes keep the panel open and re-analyze.
 // changeInfo.url fires on navigation; changeInfo.status === 'complete' catches
 // same-URL refreshes where the URL doesn't change but the page reloads.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!tab.active) return
   if (changeInfo.url) {
-    chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {})
+    // New URL — close the panel so the user can choose when to open it
+    chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => {})
   } else if (changeInfo.status === 'complete') {
+    // Same-URL refresh — keep panel open and re-analyze
     chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: tab.url }).catch(() => {})
   }
 })

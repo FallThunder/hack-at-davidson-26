@@ -1,14 +1,34 @@
 /* Evident highlight styles — injected into every page */
 
+/* Holographic shimmer: animates background-image (gradient overlay) which layers
+   on top of the inline background-color without overriding it */
+@keyframes evident-shimmer {
+  0%   { background-position: 250% center; }
+  100% { background-position: -250% center; }
+}
+
 .evident-highlight {
   position: relative;
   border-radius: 2px;
   cursor: pointer;
   transition: filter 0.15s ease;
+  background-image: linear-gradient(
+    110deg,
+    rgba(255,255,255,0)   15%,
+    rgba(255,255,255,0.55) 40%,
+    rgba(160,210,255,0.4)  47%,
+    rgba(210,160,255,0.4)  53%,
+    rgba(255,255,255,0.55) 60%,
+    rgba(255,255,255,0)   85%
+  );
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  background-position: 250% center; /* park gradient off-screen until hover */
 }
 
 .evident-highlight:hover {
   filter: brightness(0.92);
+  animation: evident-shimmer 1.2s ease-out forwards;
 }
 
 /* Urgency 1–2: yellow, dotted border (lightest visual weight) */
@@ -97,7 +117,7 @@
 
 /* Reduced motion: disable all transitions and animations */
 @media (prefers-reduced-motion: reduce) {
-  .evident-highlight       { transition: none !important; }
+  .evident-highlight       { transition: none !important; animation: none !important; }
   .evident-highlight-pulse { animation: none !important; }
   .evident-tooltip         { transition: none !important; }
 }

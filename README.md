@@ -9,7 +9,7 @@ Detect bias. Verify claims. Understand truth — at a glance.
 <br>
 
 ![Hackathon](https://img.shields.io/badge/Hack@Davidson-2026-blue.svg)
-![Version](https://img.shields.io/badge/version-1.5.0-orange.svg)
+![Version](https://img.shields.io/badge/version-1.7.0-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Chrome-green.svg)
 ![AI](https://img.shields.io/badge/powered%20by-Claude%20Sonnet-purple.svg)
 
@@ -46,21 +46,24 @@ The extension uses a **live backend** (`factcheck.coredoes.dev`) that analyzes a
 
 - First visit to an article: analysis streams in (publisher profile first, then flags once ready)
 - Subsequent visits or tab switches: results are restored instantly from the local extension cache — no API call made
+- Navigating away from an article automatically closes the panel; click the toolbar icon on any article to open it again
 - Non-article pages (new tabs, settings, etc.) show a "no analysis available" message
 
 ---
 
 ## Features
 
-- **Streaming UI** — results appear progressively (site profile → dimensions → flags), skeleton cards fill in as data arrives
-- **Trust Meter** — animated SVG arc + count-up number, color-coded by tier (red / yellow / green)
-- **Inline highlights** — urgency-coded spans injected directly into article text; beat any page `!important` CSS via inline style priority
+- **Streaming UI** — shimmer skeleton cards fill in progressively as results arrive; cycling status messages keep you informed while loading
+- **Trust Meter** — animated spinning arc while analyzing, then animated SVG arc + count-up number, color-coded by tier (red / yellow / green)
+- **Inline highlights** — urgency-coded spans injected directly into article text; beat any page `!important` CSS via inline style priority; hover triggers a holographic iridescent shimmer effect
 - **Hover tooltips** — fixed-position, escape `overflow:hidden` containers on any news site
 - **Click popovers** — flag detail card (reasoning + sources) anchored to the highlighted text
 - **Bidirectional scroll** — click article highlight → side panel scrolls to flag card; click flag card excerpt → article scrolls to highlight with pulse animation
 - **Active flag tracking** — blue ring follows whichever flag was most recently activated (from article or panel)
 - **Dark / light mode** — synced to system preference, manual override
-- **Tab result caching** — switching back to a previously analyzed tab restores results instantly with no API call; page refreshes and new navigations always re-analyze
+- **Tab result caching** — switching back to a previously analyzed tab restores results instantly with no API call; same-page refreshes re-analyze; navigating to a new URL closes the panel so you choose when to activate it
+- **Paywall support** — article text extracted from the page is sent directly to the backend, so paywalled articles you've loaded are fully analyzable
+- **Slow response warning** — amber banner appears after 2 minutes if the backend hasn't responded
 - **Clean close** — closing the panel removes all highlights, tooltips, and popovers from the article
 
 ---

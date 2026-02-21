@@ -10,6 +10,15 @@ import { SkeletonCard, SkeletonSiteProfile, SkeletonFlagCard } from './component
 import { FlagCard } from './components/FlagCard.jsx'
 import { HighlightToggle } from './components/HighlightToggle.jsx'
 
+const STATUS_MESSAGES = [
+  'Reading article...',
+  'Analyzing article...',
+  'Checking factual claims...',
+  'Evaluating sources...',
+  'Assessing rhetoric...',
+  'Reviewing statistics...',
+]
+
 const DIMENSION_ORDER = [
   'factCheck',
   'rhetoric',
@@ -36,8 +45,22 @@ export function App() {
   // Original-array index of the flag that was clicked in the article
   const [activeFlag, setActiveFlag] = useState(null)
 
-  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain } = useAnalysis()
+  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags)
+
+  const [statusMsgIdx, setStatusMsgIdx] = useState(0)
+
+  // Cycle status message while loading
+  useEffect(() => {
+    if (status !== 'extracting' && status !== 'analyzing') {
+      setStatusMsgIdx(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setStatusMsgIdx(i => (i + 1) % STATUS_MESSAGES.length)
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [status])
 
   // Sync dark mode class to side panel <html> and persist to localStorage
   useEffect(() => {
@@ -139,7 +162,22 @@ export function App() {
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" />
               </svg>
-              {unsupportedDomain ? (
+              {notAnArticle ? (
+                <>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    This looks like a homepage or category page.
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                    Navigate to a specific article to analyze it.
+                  </p>
+                  <button
+                    onClick={() => startAnalysis(false, true)}
+                    className="mt-1 px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium transition-colors duration-150"
+                  >
+                    Analyze anyway
+                  </button>
+                </>
+              ) : unsupportedDomain ? (
                 <>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {unsupportedDomain} is not in your news sites list.
@@ -167,14 +205,23 @@ export function App() {
             </div>
           )}
 
-          {/* Extracting state */}
-          {status === 'extracting' && (
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 px-0.5">
-              <svg className="animate-spin w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none">
+          {/* Status line — visible during extraction and analysis */}
+          {isAnalyzing && (
+            <div className="flex items-center gap-2.5 px-0.5">
+              <svg className="animate-spin shrink-0 w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              Reading article…
+              <span key={statusMsgIdx} className="text-sm text-gray-500 dark:text-gray-400 animate-fade-in-up">
+                {STATUS_MESSAGES[statusMsgIdx]}
+              </span>
+            </div>
+          )}
+
+          {/* Slow-response warning */}
+          {slowWarning && isAnalyzing && (
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+              Analysis is taking longer than usual. The server may be busy — please wait a moment or try refreshing the page.
             </div>
           )}
 
@@ -183,8 +230,18 @@ export function App() {
             <TrustMeter score={trustScore.score} tier={trustScore.tier} />
           ) : isAnalyzing && (
             <div className="flex flex-col items-center py-5">
-              <div className="w-36 h-36 rounded-full border-8 border-gray-200 dark:border-gray-700 animate-pulse" />
-              <div className="mt-3 h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="relative w-36 h-36">
+                <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" aria-hidden="true">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="9" className="text-gray-200 dark:text-gray-700" />
+                  <circle
+                    cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="9"
+                    strokeLinecap="round" strokeDasharray="70 213"
+                    className="text-indigo-400 dark:text-indigo-500 animate-spin origin-center"
+                    style={{ animationDuration: '2s' }}
+                  />
+                </svg>
+              </div>
+              <div className="mt-3 h-3 w-24 skeleton-shimmer rounded" />
             </div>
           )}
 

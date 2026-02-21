@@ -18,6 +18,7 @@ const initialState = {
   hasDimensions: false,     // stays false for live API (no dimension cards shown)
   unsupportedDomain: null,  // hostname when page is real but not in the news allowlist
   notAnArticle: false,      // true when domain is known but page looks like a homepage/category
+  slowWarning: false,       // true after 2 minutes without a response
   error: null
 }
 
@@ -58,6 +59,9 @@ function reducer(state, action) {
     case 'RESET':
       return { ...initialState }
 
+    case 'SLOW_WARNING':
+      return { ...state, slowWarning: true }
+
     case 'FORCE_ANALYZE':
       return { ...state, notAnArticle: false, status: 'analyzing' }
 
@@ -89,16 +93,21 @@ async function sendToContent(message) {
 export function useAnalysis() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const pollIntervalRef = useRef(null)
+  const slowTimeoutRef = useRef(null)
   const publisherDataRef = useRef(null)
   // Incremented on every startAnalysis call; async callbacks check this before dispatching
   // to discard results from a previous run that arrived late (stale fetch race condition).
   const runIdRef = useRef(0)
 
   const startAnalysis = useCallback(async (useCache = false, force = false) => {
-    // Cancel any in-flight poll interval from a previous run
+    // Cancel any in-flight poll interval or slow-warning timeout from a previous run
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current)
       pollIntervalRef.current = null
+    }
+    if (slowTimeoutRef.current) {
+      clearTimeout(slowTimeoutRef.current)
+      slowTimeoutRef.current = null
     }
     publisherDataRef.current = null
 
@@ -151,6 +160,11 @@ export function useAnalysis() {
 
     dispatch({ type: 'START_ANALYZE' })
 
+    // Warn the user if no response after 2 minutes
+    slowTimeoutRef.current = setTimeout(() => {
+      if (runIdRef.current === runId) dispatch({ type: 'SLOW_WARNING' })
+    }, 120000)
+
     // Fetch publisher data immediately (fast, cached by backend)
     fetch(`${BACKEND_URL}/publisher?url=${encodeURIComponent(url)}`, { cache: 'no-store' })
       .then(res => res.json())
@@ -168,7 +182,7 @@ export function useAnalysis() {
     // Poll /analyze until ready
     const poll = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/analyze`, {
+        const res = await fetch(`${BACKEND_URL}/analyze?url=${encodeURIComponent(url)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           cache: 'no-store',
@@ -182,6 +196,8 @@ export function useAnalysis() {
         if (data.ready && data.data) {
           clearInterval(pollIntervalRef.current)
           pollIntervalRef.current = null
+          clearTimeout(slowTimeoutRef.current)
+          slowTimeoutRef.current = null
 
           const { overall_tone, overall_factuality, flags } = data.data.content_analysis
 
@@ -212,5 +228,5 @@ export function useAnalysis() {
     pollIntervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
   }, [])
 
-  return { ...state, startAnalysis, notAnArticle: state.notAnArticle }
+  return { ...state, startAnalysis }
 }

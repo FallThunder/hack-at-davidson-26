@@ -11,10 +11,7 @@ Detect bias. Verify claims. Understand truth — instantly.
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Hackathon](https://img.shields.io/badge/Hack@Davidson-2026-blue.svg)
 ![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)
-![Platform](https://img.shields.io/badge/platform-Chrome%20Extension-yellow.svg)
 ![AI](https://img.shields.io/badge/powered%20by-AI-purple.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
 <br>
 

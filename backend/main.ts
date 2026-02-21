@@ -10,7 +10,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 //
 // /publisher returns the Site Profile and general information about the publisher. It returns quickly, and is synchronous
 // /analyze should be called repeatedly until it returns ready:true with the analysis. Analysis can take a couple minutes if the article has not been analyzed before, and the user should be informed of this.
-// 
+//
 // Both of these endpoints are heavily cached, and will return very rapidly if the article or publisher has been analyzed recently.
 
 const profile_score = z.object({
@@ -56,16 +56,26 @@ interface Response {
     data: object | null;
 }
 
+const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+};
+
+function corsJson(data: object, status = 200) {
+    return Response.json(data, { status, headers: CORS_HEADERS });
+}
+
 async function publisher(url: string): Response {
     if (Object.keys(database2).includes(url)) {
 	const existing = database2[url];
 	if (existing === null) {
-	    return Response.json({
+	    return corsJson({
 		ready: false,
 		data: null
 	    }, noCache);
 	} else {
-	    return Response.json({
+	    return corsJson({
 		ready: true,
 		data: existing
 	    }, yesCache);
@@ -102,7 +112,7 @@ async function publisher(url: string): Response {
     database2[url] = output;
     console.log(output);
     console.log(finalMsg);
-    return Response.json({
+    return corsJson({
 	ready: true,
 	data: output
     }, yesCache);
@@ -127,18 +137,17 @@ async function analyze(url: string): Response {
 	const existing = database[url];
 	console.log(existing);
 	if (existing === null) {
-	    return  Response.json({
+	    return corsJson({
 		ready: false,
 		data: null
 	    }, noCache);
 	} else {
-	    return  Response.json({
+	    return corsJson({
 		ready: true,
 		data: existing
 	    }, yesCache);
 	}
     }
-    if (Object.keys(database).length !== 0) return;
     const msg = anthropic.messages.stream({
 	model: "claude-haiku-4-5",
 	tools: [{
@@ -216,8 +225,7 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 	console.log('completed analysis for ' + url);
 	console.log(database);
     });
-    return Response.json({
-
+    return corsJson({
 	ready: false,
 	data: null
     }, noCache);
@@ -226,6 +234,9 @@ You are a rigorous, politically neutral fact-checking engine. You will be given 
 const server = Bun.serve({
     routes: {
 	"/publisher": async req => {
+	    if (req.method === 'OPTIONS') {
+		return new Response(null, { status: 204, headers: CORS_HEADERS });
+	    }
 	    const reqUrl = new URL(req.url);
 	    const analyzeUrl = reqUrl.searchParams.get("url");
 	    if (!analyzeUrl) {
@@ -234,6 +245,9 @@ const server = Bun.serve({
 	    return await publisher(analyzeUrl);
 	},
         "/analyze": async req => {
+	    if (req.method === 'OPTIONS') {
+		return new Response(null, { status: 204, headers: CORS_HEADERS });
+	    }
 	    const reqUrl = new URL(req.url);
 	    const analyzeUrl = reqUrl.searchParams.get("url");
 	    if (!analyzeUrl) {

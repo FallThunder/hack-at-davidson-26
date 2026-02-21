@@ -15,10 +15,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 })
 
-// When the user switches tabs, re-analyze the newly active tab
+// When the user switches tabs, notify the side panel (source: 'tabSwitch' so it can use cached results)
 chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
-    chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: tab.url }).catch(() => {})
+    chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: tab.url, source: 'tabSwitch' }).catch(() => {})
   })
 })
 

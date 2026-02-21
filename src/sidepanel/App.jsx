@@ -67,7 +67,7 @@ export function App() {
       if (message.type === 'PAGE_NAVIGATED') {
         setActiveFlag(null)
         resetHighlights()
-        startAnalysis()
+        startAnalysis(message.source === 'tabSwitch')
       }
     }
     chrome.runtime.onMessage.addListener(handler)
@@ -120,7 +120,7 @@ export function App() {
                 No analysis available for this page.
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-                Navigate to one of the supported articles to see Evident in action.
+                Navigate to a news article to see Evident in action.
               </p>
             </div>
           )}

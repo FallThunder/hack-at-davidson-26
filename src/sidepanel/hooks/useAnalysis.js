@@ -1,24 +1,20 @@
 import { useReducer, useCallback, useRef } from 'react'
-import { computeTrustScore } from '../../utils/scoring.js'
-import { MOCK_BY_URL } from '../mockData.js'
+import { computeTrustScoreFromFlags } from '../../utils/scoring.js'
 
-const DIMENSION_ORDER = [
-  'factCheck',
-  'rhetoric',
-  'headlineAccuracy',
-  'statistics',
-  'sourceDiversity',
-  'emotionalArc'
-]
+const BACKEND_URL = 'https://factcheck.coredoes.dev'
+const POLL_INTERVAL_MS = 3000
+
+// Per-session cache keyed by URL — avoids redundant API calls when switching tabs
+const analysisCache = new Map()
 
 const initialState = {
   status: 'idle',       // 'idle' | 'extracting' | 'analyzing' | 'unsupported' | 'complete'
   article: null,        // { headline, url }
-  siteProfile: null,    // populated first
-  dimensions: {},       // filled one by one
-  flags: [],            // populated after last dimension
-  trustScore: null,     // { score, tier } — computed when all 6 arrive
-  hasDimensions: false, // true once we confirm a valid mock exists for this URL
+  siteProfile: null,    // populated from /publisher, then updated with tone/factuality from /analyze
+  dimensions: {},       // unused for live API (no dimensions from backend)
+  flags: [],            // populated when /analyze completes
+  trustScore: null,     // { score, tier } — computed from flags
+  hasDimensions: false, // stays false for live API (no dimension cards shown)
   error: null
 }
 
@@ -31,7 +27,7 @@ function reducer(state, action) {
       return { ...state, article: action.payload }
 
     case 'START_ANALYZE':
-      return { ...state, status: 'analyzing', hasDimensions: true }
+      return { ...state, status: 'analyzing', hasDimensions: false }
 
     case 'UNSUPPORTED':
       return { ...state, status: 'unsupported' }
@@ -39,23 +35,14 @@ function reducer(state, action) {
     case 'SITE_PROFILE_RECEIVED':
       return { ...state, siteProfile: action.payload }
 
-    case 'DIMENSION_RECEIVED': {
-      const newDimensions = { ...state.dimensions, [action.payload.dimension]: action.payload }
-      const allComplete = DIMENSION_ORDER.every(k => newDimensions[k])
-
-      let trustScore = state.trustScore
-      if (allComplete) {
-        const scores = Object.fromEntries(
-          DIMENSION_ORDER.map(k => [k, newDimensions[k].score])
-        )
-        trustScore = computeTrustScore(scores)
-      }
-
-      return { ...state, dimensions: newDimensions, trustScore }
-    }
+    case 'DIMENSION_RECEIVED':
+      return state
 
     case 'FLAGS_RECEIVED':
       return { ...state, flags: action.payload }
+
+    case 'TRUST_SCORE_RECEIVED':
+      return { ...state, trustScore: action.payload }
 
     case 'ANALYSIS_COMPLETE':
       return { ...state, status: 'complete' }
@@ -90,12 +77,16 @@ function sendToContent(message) {
 
 export function useAnalysis() {
   const [state, dispatch] = useReducer(reducer, initialState)
-  const pendingTimeouts = useRef([])
+  const pollIntervalRef = useRef(null)
+  const publisherDataRef = useRef(null)
 
-  const startAnalysis = useCallback(async () => {
-    // Cancel any in-flight mock-streaming timeouts from a previous run
-    pendingTimeouts.current.forEach(id => clearTimeout(id))
-    pendingTimeouts.current = []
+  const startAnalysis = useCallback(async (useCache = false) => {
+    // Cancel any in-flight poll interval from a previous run
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+    publisherDataRef.current = null
 
     dispatch({ type: 'RESET' })
     dispatch({ type: 'START_EXTRACT' })
@@ -105,42 +96,76 @@ export function useAnalysis() {
     const article = articleData ?? { headline: '', url: '', text: '', sentences: [] }
     dispatch({ type: 'ARTICLE_RECEIVED', payload: article })
 
-    // Check if the current URL exactly matches one of our example articles
-    const mock = MOCK_BY_URL[article.url]
-    if (!mock) {
+    // Only analyzable URLs are http/https pages
+    const url = article.url ?? ''
+    if (!url || url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:')) {
       dispatch({ type: 'UNSUPPORTED' })
       return
     }
 
-    dispatch({ type: 'START_ANALYZE' })
-
-    const schedule = (fn, delay) => {
-      const id = setTimeout(fn, delay)
-      pendingTimeouts.current.push(id)
+    // Restore from cache on tab switch — no API calls needed
+    if (useCache) {
+      const cached = analysisCache.get(url)
+      if (cached) {
+        dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: cached.siteProfile })
+        dispatch({ type: 'FLAGS_RECEIVED', payload: cached.flags })
+        dispatch({ type: 'TRUST_SCORE_RECEIVED', payload: cached.trustScore })
+        dispatch({ type: 'ANALYSIS_COMPLETE' })
+        return
+      }
     }
 
-    // Simulate streaming: site profile arrives first
-    schedule(() => {
-      dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: mock.siteProfile })
-    }, 400)
+    dispatch({ type: 'START_ANALYZE' })
 
-    // Dimensions stream in one by one
-    mock.dimensions.forEach((dimension, index) => {
-      schedule(() => {
-        dispatch({ type: 'DIMENSION_RECEIVED', payload: dimension })
-      }, 800 + index * 700)
-    })
+    // Fetch publisher data immediately (fast, cached by backend)
+    fetch(`${BACKEND_URL}/publisher?url=${encodeURIComponent(url)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.ready && data.data) {
+          publisherDataRef.current = data.data
+          dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: data.data })
+        }
+      })
+      .catch(() => {
+        // Non-fatal: continue without site profile
+      })
 
-    // Flags arrive after the last dimension
-    const totalDelay = 800 + (mock.dimensions.length - 1) * 700 + 300
-    schedule(() => {
-      dispatch({ type: 'FLAGS_RECEIVED', payload: mock.flags })
-    }, totalDelay)
+    // Poll /analyze until ready
+    const poll = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/analyze?url=${encodeURIComponent(url)}`)
+        const data = await res.json()
 
-    // Mark complete
-    schedule(() => {
-      dispatch({ type: 'ANALYSIS_COMPLETE' })
-    }, totalDelay + 100)
+        if (data.ready && data.data) {
+          clearInterval(pollIntervalRef.current)
+          pollIntervalRef.current = null
+
+          const { overall_tone, overall_factuality, flags } = data.data.content_analysis
+
+          // Merge publisher data with tone/factuality from analyze
+          const mergedSiteProfile = {
+            ...(publisherDataRef.current ?? {}),
+            overall_tone,
+            overall_factuality
+          }
+          const trustScore = computeTrustScoreFromFlags(flags)
+
+          dispatch({ type: 'SITE_PROFILE_RECEIVED', payload: mergedSiteProfile })
+          dispatch({ type: 'FLAGS_RECEIVED', payload: flags })
+          dispatch({ type: 'TRUST_SCORE_RECEIVED', payload: trustScore })
+          dispatch({ type: 'ANALYSIS_COMPLETE' })
+
+          // Cache result so switching back to this tab skips the API call
+          analysisCache.set(url, { siteProfile: mergedSiteProfile, flags, trustScore })
+        }
+      } catch {
+        // Continue polling on network error
+      }
+    }
+
+    // Run immediately, then on interval
+    await poll()
+    pollIntervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
   }, [])
 
   return { ...state, startAnalysis }

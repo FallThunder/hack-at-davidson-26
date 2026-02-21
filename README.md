@@ -9,9 +9,9 @@ Detect bias. Verify claims. Understand truth — at a glance.
 <br>
 
 ![Hackathon](https://img.shields.io/badge/Hack@Davidson-2026-blue.svg)
-![Version](https://img.shields.io/badge/version-1.3.0-orange.svg)
+![Version](https://img.shields.io/badge/version-1.5.0-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Chrome-green.svg)
-![AI](https://img.shields.io/badge/powered%20by-Gemini%202.5%20Flash-purple.svg)
+![AI](https://img.shields.io/badge/powered%20by-Claude%20Sonnet-purple.svg)
 
 <br>
 
@@ -42,14 +42,11 @@ Highlighted sentences are interactive: hover for a tooltip, click for a full car
 
 ## Current State
 
-The extension currently runs on **pre-analyzed mock data** for two specific articles, with simulated streaming delays that mirror a real Gemini API response:
+The extension uses a **live backend** (`factcheck.coredoes.dev`) that analyzes any news article via Claude Sonnet. Analysis is cached server-side, so revisiting an article is near-instant.
 
-| Article | URL |
-|---------|-----|
-| Fox News — Scott Bessent tariffs | `foxnews.com/media/scott-bessent-says-supreme-court...` |
-| Boing Boing — Egypt pyramids | `boingboing.net/2026/02/09/how-subraction-not-addition...` |
-
-On any other page, the panel shows a "no analysis available" message. The live Gemini API layer (`/api/analyze`) is the next step.
+- First visit to an article: analysis streams in (publisher profile first, then flags once ready)
+- Subsequent visits or tab switches: results are restored instantly from the local extension cache — no API call made
+- Non-article pages (new tabs, settings, etc.) show a "no analysis available" message
 
 ---
 
@@ -63,7 +60,7 @@ On any other page, the panel shows a "no analysis available" message. The live G
 - **Bidirectional scroll** — click article highlight → side panel scrolls to flag card; click flag card excerpt → article scrolls to highlight with pulse animation
 - **Active flag tracking** — blue ring follows whichever flag was most recently activated (from article or panel)
 - **Dark / light mode** — synced to system preference, manual override
-- **Auto re-analysis** — re-runs when you switch tabs, navigate, or refresh the page
+- **Tab result caching** — switching back to a previously analyzed tab restores results instantly with no API call; page refreshes and new navigations always re-analyze
 - **Clean close** — closing the panel removes all highlights, tooltips, and popovers from the article
 
 ---
@@ -95,9 +92,9 @@ Then load the `/dist` folder as an unpacked extension (same steps 3–5 above).
 |-------|-----------|
 | Extension | Chrome Manifest V3 |
 | Side panel UI | React 18 + Vite 5 + Tailwind CSS 3.4 |
-| Analysis API (planned) | Gemini 2.5 Flash via Vercel serverless proxy |
+| Analysis API | Claude Sonnet via live backend at `factcheck.coredoes.dev` |
 | Build | Three-pass Vite `build()` in `build.js` (side panel, content script IIFE, service worker ESM) |
-| State | `useReducer` state machine with simulated NDJSON streaming |
+| State | `useReducer` state machine; per-session URL cache avoids redundant API calls on tab switch |
 | Text matching | Jaccard word similarity (threshold 0.5) with cross-node DOM range wrapping |
 
 ---
@@ -111,7 +108,7 @@ Then load the `/dist` folder as an unpacked extension (same steps 3–5 above).
     mockData.js     URL-keyed mock data adapter (example2 + example3)
     components/     TrustMeter, SiteProfile, DimensionCard, FlagCard, ...
     hooks/
-      useAnalysis.js   useReducer state machine + mock streaming
+      useAnalysis.js   useReducer state machine + live backend polling + URL cache
       useHighlights.js APPLY / TOGGLE / CLEAR / SCROLL highlight control
   content/
     content.js      Article extraction, highlight injection, tooltip + popover
@@ -122,7 +119,7 @@ Then load the `/dist` folder as an unpacked extension (same steps 3–5 above).
     scoring.js         Weighted Trust Score formula
     articleExtractor.js Heuristic article text extraction
 /api/
-  analyze.js        Vercel serverless proxy → Gemini API (to be wired up)
+  analyze.js        Vercel serverless proxy → Claude API (to be wired up)
 /public/
   manifest.json     MV3 manifest
   icons/            16, 48, 128px + trust-tier colored variants

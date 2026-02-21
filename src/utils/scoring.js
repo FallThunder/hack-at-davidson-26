@@ -27,3 +27,14 @@ export function getScoreColor(score) {
 export function getTierLabel(tier) {
   return { high: 'High Trust', moderate: 'Moderate Trust', low: 'Low Trust' }[tier] ?? 'Unknown'
 }
+
+export function computeTrustScoreFromFlags(flags) {
+  const DEDUCTIONS = { 5: 15, 4: 10, 3: 6, 2: 3, 1: 1 }
+  const total = flags.reduce((sum, flag) => {
+    const urgency = Math.min(Math.max(flag.urgency, 1), 5)
+    return sum + DEDUCTIONS[urgency] * flag.confidence
+  }, 0)
+  const score = Math.max(5, Math.round(100 - total))
+  const tier = score >= 70 ? 'high' : score >= 40 ? 'moderate' : 'low'
+  return { score, tier }
+}

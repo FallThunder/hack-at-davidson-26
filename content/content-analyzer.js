@@ -808,75 +808,207 @@ class ContentAnalyzer {
         return content;
     }
 
-    // Find the main article element using multiple strategies
+    // Find the main article element using multiple strategies (improved for news sites)
     findMainArticleElement() {
-        // Try semantic HTML first
-        let article = document.querySelector('article');
-        if (article && article.textContent.length > 500) {
-            return article;
+        console.log('Finding main article element...');
+        
+        // Strategy 1: Try semantic HTML first with validation
+        const articles = document.querySelectorAll('article');
+        for (const article of articles) {
+            if (this.isMainArticleCandidate(article)) {
+                console.log('Found main article via semantic HTML');
+                return article;
+            }
         }
 
-        // Try common article selectors
-        const articleSelectors = [
-            '[role="article"]', '.article-content', '.post-content',
-            '.entry-content', '.story-content', '.article-body',
-            '.post-body', '.content', '.main-content', '.article-text'
+        // Strategy 2: Try news-specific selectors
+        const newsSelectors = [
+            '[role="article"]',
+            '.article-content', '.story-content', '.article-body',
+            '.post-content', '.entry-content', '.main-content',
+            '.article-text', '.story-body', '.article-main',
+            // CNN specific
+            '.pg-rail-tall__body', '.zn-body__paragraph',
+            // Common news patterns
+            '[data-module="ArticleBody"]', '[data-component="ArticleBody"]',
+            '.RichTextArticleBody', '.ArticleBody'
         ];
 
-        for (const selector of articleSelectors) {
+        for (const selector of newsSelectors) {
             const element = document.querySelector(selector);
-            if (element && element.textContent.length > 500) {
+            if (element && this.isMainArticleCandidate(element)) {
+                console.log(`Found main article via selector: ${selector}`);
                 return element;
             }
         }
 
-        // Try to find the element with the most text content
-        const candidates = document.querySelectorAll('div, section, main');
+        // Strategy 3: Find element with best content characteristics
+        const candidates = document.querySelectorAll('div, section, main, article');
         let bestCandidate = null;
-        let maxTextLength = 0;
+        let bestScore = 0;
 
         candidates.forEach(candidate => {
-            const textLength = candidate.textContent.length;
-            const paragraphs = candidate.querySelectorAll('p').length;
-            
-            // Score based on text length and paragraph count
-            const score = textLength + (paragraphs * 100);
-            
-            if (score > maxTextLength && textLength > 500) {
-                maxTextLength = score;
+            const score = this.scoreArticleCandidate(candidate);
+            if (score > bestScore && score > 100) { // Minimum threshold
+                bestScore = score;
                 bestCandidate = candidate;
             }
         });
 
-        return bestCandidate;
+        if (bestCandidate) {
+            console.log(`Found main article via scoring (score: ${bestScore})`);
+            return bestCandidate;
+        }
+
+        console.warn('No suitable main article element found');
+        return null;
     }
 
-    // Extract potential factual claims from text
+    // Check if element is a good main article candidate
+    isMainArticleCandidate(element) {
+        if (!element || element.textContent.length < 300) return false;
+        
+        // Exclude elements that are clearly not main content
+        const excludePatterns = [
+            /sidebar|related|recommended|trending|popular/i,
+            /comments?|social|share|footer|header|nav/i,
+            /advertisement|ads?|promo|sponsored/i,
+            /newsletter|subscribe|signup/i
+        ];
+        
+        const className = element.className || '';
+        const id = element.id || '';
+        const combined = className + ' ' + id;
+        
+        if (excludePatterns.some(pattern => pattern.test(combined))) {
+            return false;
+        }
+        
+        // Must have substantial paragraph content
+        const paragraphs = element.querySelectorAll('p');
+        const substantialParagraphs = Array.from(paragraphs).filter(p => 
+            p.textContent.trim().length > 50
+        ).length;
+        
+        return substantialParagraphs >= 3;
+    }
+
+    // Score article candidates based on content characteristics
+    scoreArticleCandidate(element) {
+        if (!element) return 0;
+        
+        let score = 0;
+        const text = element.textContent || '';
+        const textLength = text.length;
+        
+        // Base score from text length
+        score += Math.min(textLength / 10, 200);
+        
+        // Paragraph analysis
+        const paragraphs = element.querySelectorAll('p');
+        const substantialParagraphs = Array.from(paragraphs).filter(p => {
+            const pText = p.textContent.trim();
+            return pText.length > 50 && pText.length < 2000; // Not too short or too long
+        });
+        
+        score += substantialParagraphs.length * 20;
+        
+        // Penalize if it contains too many links (likely navigation/sidebar)
+        const links = element.querySelectorAll('a');
+        const linkDensity = links.length / Math.max(textLength / 100, 1);
+        if (linkDensity > 5) score -= 100; // High link density = likely not main content
+        
+        // Bonus for article-like structure
+        const headings = element.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        if (headings.length > 0 && headings.length < 10) score += 30;
+        
+        // Penalize elements with navigation-like characteristics
+        const className = element.className || '';
+        const id = element.id || '';
+        const combined = (className + ' ' + id).toLowerCase();
+        
+        if (/sidebar|nav|menu|related|recommended|trending/i.test(combined)) {
+            score -= 150;
+        }
+        
+        // Bonus for main content indicators
+        if (/article|content|story|main|body/i.test(combined)) {
+            score += 50;
+        }
+        
+        // Penalize if element is too nested (likely not main content)
+        let depth = 0;
+        let parent = element.parentElement;
+        while (parent && depth < 10) {
+            depth++;
+            parent = parent.parentElement;
+        }
+        if (depth > 8) score -= 30;
+        
+        // Penalize very wide elements (likely full-page containers)
+        if (element.offsetWidth && element.offsetWidth > window.innerWidth * 0.9) {
+            score -= 50;
+        }
+        
+        return score;
+    }
+
+    // Extract potential factual claims from text (improved)
     extractClaims(paragraphs) {
-        const claims = [];
-        const claimIndicators = [
-            /according to/i, /studies show/i, /research indicates/i,
-            /data reveals/i, /statistics show/i, /experts say/i,
-            /reports indicate/i, /analysis shows/i, /findings suggest/i,
-            /\d+%/, /\$[\d,]+/, /\d+ million/, /\d+ billion/,
-            /increased by/i, /decreased by/i, /rose by/i, /fell by/i
+        const claims = new Set(); // Use Set to avoid duplicates
+        
+        // Enhanced claim indicators with more sophisticated patterns
+        const claimPatterns = [
+            // Authority-based claims
+            /[^.!?]*(?:according to|officials say|experts claim|researchers found|study shows|data reveals|reports indicate)[^.!?]*/gi,
+            
+            // Statistical claims
+            /[^.!?]*(?:\d+(?:\.\d+)?%|increased by|decreased by|rose by|fell by|\d+(?:,\d{3})*\s*(?:million|billion|trillion))[^.!?]*/gi,
+            
+            // Temporal claims
+            /[^.!?]*(?:since \d{4}|in \d{4}|by \d{4}|over the (?:past|last) \d+ (?:years?|months?|decades?))[^.!?]*/gi,
+            
+            // Causal claims
+            /[^.!?]*(?:caused by|resulted in|led to|due to|because of|as a result of)[^.!?]*/gi,
+            
+            // Comparative claims
+            /[^.!?]*(?:more than|less than|higher than|lower than|compared to|versus)[^.!?]*(?:\d+|other|previous|last year)/gi,
+            
+            // Definitive statements that could be fact-checked
+            /[^.!?]*(?:will|announced|confirmed|denied|stated|declared|revealed)[^.!?]*/gi
         ];
 
         paragraphs.forEach(paragraph => {
-            const sentences = paragraph.split(/[.!?]+/);
-            sentences.forEach(sentence => {
-                const trimmed = sentence.trim();
-                if (trimmed.length > 30) {
-                    // Check if sentence contains claim indicators
-                    const hasClaim = claimIndicators.some(pattern => pattern.test(trimmed));
-                    if (hasClaim) {
-                        claims.push(trimmed);
+            claimPatterns.forEach(pattern => {
+                let match;
+                while ((match = pattern.exec(paragraph)) !== null && claims.size < 15) {
+                    const claim = match[0].trim();
+                    
+                    // Filter out low-quality claims
+                    if (claim.length > 40 && 
+                        claim.length < 300 && 
+                        !claim.toLowerCase().includes('advertisement') &&
+                        !claim.toLowerCase().includes('subscribe') &&
+                        claim.split(' ').length > 5) {
+                        
+                        // Clean up the claim
+                        const cleanClaim = claim
+                            .replace(/^[^\w]*/, '') // Remove leading non-word chars
+                            .replace(/[^\w]*$/, '') // Remove trailing non-word chars
+                            .replace(/\s+/g, ' ') // Normalize whitespace
+                            .trim();
+                            
+                        if (cleanClaim.length > 30) {
+                            claims.add(cleanClaim);
+                        }
                     }
                 }
+                // Reset regex lastIndex to avoid issues with global flag
+                pattern.lastIndex = 0;
             });
         });
 
-        return claims.slice(0, 10); // Limit to top 10 claims
+        return Array.from(claims).slice(0, 8); // Limit to top 8 quality claims
     }
 
     // Extract sources and references
@@ -1074,7 +1206,7 @@ class ContentAnalyzer {
         return analysis;
     }
 
-    // Extract data useful for fact-checking
+    // Extract data useful for fact-checking from main content only
     extractFactCheckingData() {
         const data = {
             numericalClaims: [],
@@ -1084,31 +1216,64 @@ class ContentAnalyzer {
             organizations: []
         };
 
-        const text = document.body.textContent;
+        // Use main article content only, not entire page
+        const mainArticle = this.findMainArticleElement();
+        if (!mainArticle) {
+            console.warn('No main article found for fact-checking extraction');
+            return data;
+        }
 
-        // Extract numerical claims
-        const numberPatterns = [
-            /\d+%/g,
-            /\$[\d,]+(?:\.\d{2})?(?:\s*(?:million|billion|trillion))?/gi,
-            /\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|trillion)/gi
+        const text = mainArticle.textContent;
+
+        // Extract meaningful numerical claims with context
+        const numericalClaims = new Set(); // Use Set to avoid duplicates
+        
+        // More sophisticated patterns with context
+        const contextualPatterns = [
+            // Percentages with context
+            /(?:increased|decreased|rose|fell|up|down|grew|declined)\s+(?:by\s+)?(\d+(?:\.\d+)?%)/gi,
+            /(\d+(?:\.\d+)?%)\s+(?:increase|decrease|rise|fall|growth|decline|higher|lower|more|less)/gi,
+            /(\d+(?:\.\d+)?%)\s+of\s+(?:people|voters|respondents|Americans|citizens)/gi,
+            
+            // Money amounts with context
+            /(?:\$[\d,]+(?:\.\d{2})?\s*(?:million|billion|trillion))\s+(?:budget|funding|cost|investment|revenue|profit|loss)/gi,
+            /(?:spent|cost|invested|allocated|budgeted|earned|lost)\s+(?:\$[\d,]+(?:\.\d{2})?\s*(?:million|billion|trillion)?)/gi,
+            
+            // Large numbers with context
+            /(\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|trillion))\s+(?:people|jobs|dollars|votes|cases|deaths|infections)/gi,
+            
+            // Years and time periods
+            /(?:in|since|by|from|during)\s+(\d{4})/gi,
+            /(\d{1,2})\s+(?:years?|months?|weeks?|days?)\s+(?:ago|later|earlier)/gi
         ];
 
-        numberPatterns.forEach(pattern => {
-            const matches = text.match(pattern) || [];
-            data.numericalClaims.push(...matches.slice(0, 10));
+        contextualPatterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(text)) !== null && numericalClaims.size < 15) {
+                const claim = match[0].trim();
+                if (claim.length > 3 && claim.length < 100) { // Filter reasonable length claims
+                    numericalClaims.add(claim);
+                }
+            }
         });
 
-        // Extract dates
+        data.numericalClaims = Array.from(numericalClaims).slice(0, 10);
+
+        // Extract dates from main content only
         const datePatterns = [
             /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/gi,
             /\d{1,2}\/\d{1,2}\/\d{4}/g,
             /\d{4}-\d{2}-\d{2}/g
         ];
 
+        const dates = new Set();
         datePatterns.forEach(pattern => {
             const matches = text.match(pattern) || [];
-            data.dates.push(...matches.slice(0, 5));
+            matches.forEach(date => {
+                if (dates.size < 5) dates.add(date);
+            });
         });
+        data.dates = Array.from(dates);
 
         return data;
     }

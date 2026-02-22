@@ -10,6 +10,7 @@ import { DimensionCard } from './components/DimensionCard.jsx'
 import { SkeletonCard, SkeletonSiteProfile, SkeletonFlagCard } from './components/SkeletonCard.jsx'
 import { FlagCard } from './components/FlagCard.jsx'
 import { HighlightToggle } from './components/HighlightToggle.jsx'
+import { useElevenLabs } from './hooks/useElevenLabs.js'
 
 const OPINION_CATEGORIES = new Set(['Opinion', 'Editorial', 'Commentary'])
 
@@ -51,6 +52,7 @@ export function App() {
 
   const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, reset, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, analysisProgress, error } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags, darkMode)
+  const { speak, isLoading: isTtsLoading, isPlaying: isTtsPlaying } = useElevenLabs()
 
   const [statusMsgIdx, setStatusMsgIdx] = useState(0)
 
@@ -300,6 +302,37 @@ export function App() {
                 </svg>
               </div>
               <div className="mt-3 h-3 w-24 skeleton-shimmer rounded" />
+            </div>
+          )}
+
+          {/* Listen to Summary button — appears after analysis completes */}
+          {status === 'complete' && trustScore && (
+            <div className="flex justify-center">
+              <button
+                onClick={() => speak({ trustScore, flags, siteProfile, headline: article?.headline })}
+                disabled={isTtsLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={isTtsPlaying ? 'Stop audio summary' : 'Listen to analysis summary'}
+              >
+                {isTtsLoading ? (
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                ) : isTtsPlaying ? (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <rect x="6" y="6" width="4" height="12" rx="1" />
+                    <rect x="14" y="6" width="4" height="12" rx="1" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path strokeLinecap="round" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    <path strokeLinecap="round" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                  </svg>
+                )}
+                {isTtsLoading ? 'Loading...' : isTtsPlaying ? 'Stop' : 'Listen to Summary'}
+              </button>
             </div>
           )}
 

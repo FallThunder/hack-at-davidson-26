@@ -29,12 +29,12 @@ export function SiteProfile({ domain, company, factual_reporting, political_bias
         </div>
         <div className="flex gap-1.5 flex-wrap justify-end">
           {overall_tone && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${toneColor}`}>
+            <span aria-label={`Article tone: ${overall_tone}`} className={`text-xs px-2 py-0.5 rounded-full font-medium ${toneColor}`}>
               {overall_tone}
             </span>
           )}
           {overall_factuality && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${factualityColor}`}>
+            <span aria-label={`Factuality: ${overall_factuality}`} className={`text-xs px-2 py-0.5 rounded-full font-medium ${factualityColor}`}>
               {overall_factuality}
             </span>
           )}
@@ -42,15 +42,22 @@ export function SiteProfile({ domain, company, factual_reporting, political_bias
       </div>
 
       {/* Political Bias bar */}
-      <div className="mb-3">
-        <div className="flex justify-between items-center mb-1">
+      <div
+        className="mb-3"
+        role="meter"
+        aria-valuenow={biasScore}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Political bias: ${political_bias?.rating ?? 'unknown'}, position ${biasScore} out of 100 from left to right`}
+      >
+        <div className="flex justify-between items-center mb-1" aria-hidden="true">
           <span className="text-xs text-gray-400 dark:text-gray-500">Left</span>
           <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
             Political Bias: {political_bias?.rating ?? '—'}
           </span>
           <span className="text-xs text-gray-400 dark:text-gray-500">Right</span>
         </div>
-        <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+        <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full" aria-hidden="true">
           {/* Gradient track */}
           <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 via-gray-300 to-red-400 opacity-70" />
           {/* Dot indicator */}
@@ -62,15 +69,21 @@ export function SiteProfile({ domain, company, factual_reporting, political_bias
       </div>
 
       {/* Factual Reporting bar */}
-      <div>
-        <div className="flex justify-between items-center mb-1">
+      <div
+        role="meter"
+        aria-valuenow={factualScore}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Factual reporting: ${factual_reporting?.rating ?? 'unknown'}, score ${factualScore} out of 100`}
+      >
+        <div className="flex justify-between items-center mb-1" aria-hidden="true">
           <span className="text-xs text-gray-400 dark:text-gray-500">Low</span>
           <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
             Factual Reporting: {factual_reporting?.rating ?? '—'}
           </span>
           <span className="text-xs text-gray-400 dark:text-gray-500">High</span>
         </div>
-        <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+        <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full" aria-hidden="true">
           {/* Gradient track */}
           <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-400 via-yellow-300 to-green-400 opacity-70" />
           {/* Dot indicator */}

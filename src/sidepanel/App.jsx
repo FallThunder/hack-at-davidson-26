@@ -209,7 +209,7 @@ export function App() {
 
           {/* Analysis error */}
           {status === 'error' && (
-            <div className="flex flex-col items-center justify-center text-center py-16 px-4 gap-3">
+            <div role="alert" className="flex flex-col items-center justify-center text-center py-16 px-4 gap-3">
               <svg className="w-10 h-10 text-red-400 dark:text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="12" cy="12" r="10" />
                 <path strokeLinecap="round" d="M12 8v4m0 4h.01" />
@@ -228,8 +228,8 @@ export function App() {
 
           {/* Status line — visible during extraction and analysis */}
           {isAnalyzing && (
-            <div className="flex items-center gap-2.5 px-0.5">
-              <svg className="animate-spin shrink-0 w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none">
+            <div role="status" aria-live="polite" className="flex items-center gap-2.5 px-0.5">
+              <svg className="animate-spin shrink-0 w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
@@ -241,14 +241,14 @@ export function App() {
 
           {/* Overloaded warning — shown when Claude API returns overloaded_error; polling continues automatically */}
           {overloadedWarning && isAnalyzing && (
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+            <div role="status" aria-live="polite" className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
               Claude is currently overloaded. Retrying automatically...
             </div>
           )}
 
           {/* Slow-response warning */}
           {slowWarning && !overloadedWarning && isAnalyzing && (
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+            <div role="status" aria-live="polite" className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
               Analysis is taking longer than usual. The server may be busy — please wait a moment or try refreshing the page.
             </div>
           )}

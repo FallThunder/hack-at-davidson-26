@@ -4,6 +4,7 @@ export function HighlightToggle({ visible, onToggle, disabled }) {
       <button
         onClick={onToggle}
         disabled={disabled}
+        aria-pressed={disabled ? undefined : visible}
         className={[
           'w-full py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 select-none',
           disabled

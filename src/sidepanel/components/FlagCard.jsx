@@ -16,6 +16,14 @@ const URGENCY_DOT_COLORS = {
   5: 'bg-red-600'
 }
 
+const URGENCY_SEMANTIC = {
+  1: 'very low',
+  2: 'low',
+  3: 'moderate',
+  4: 'high',
+  5: 'critical'
+}
+
 export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, sources = [], isActive = false, onScrollToArticle, onActivate }) {
   const [expanded, setExpanded] = useState(false)
   const cardRef = useRef(null)
@@ -35,22 +43,41 @@ export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, source
     })
   }, [isActive])
 
+  function handleCardKeyDown(e) {
+    if (e.target !== e.currentTarget) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onActivate?.()
+    }
+  }
+
+  function handleExcerptKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onScrollToArticle?.()
+    }
+  }
+
   return (
     <div
       ref={cardRef}
+      role="button"
+      tabIndex={0}
       className={[
-        'rounded-xl border p-4 transition-shadow duration-200',
+        'rounded-xl border p-4 transition-shadow duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:focus-visible:ring-indigo-500',
         cardStyle,
         isActive ? 'ring-2 ring-indigo-400 dark:ring-indigo-500 shadow-md' : ''
       ].join(' ')}
       onClick={onActivate}
+      onKeyDown={handleCardKeyDown}
+      aria-pressed={isActive}
     >
       {/* Header: urgency dot, flag type, confidence */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <span className="flex items-center gap-1 shrink-0" aria-label={`Urgency ${clampedUrgency} of 5`}>
+          <span className="flex items-center gap-1 shrink-0" aria-label={`Urgency: ${clampedUrgency} of 5 — ${URGENCY_SEMANTIC[clampedUrgency]}`}>
             <span className={`w-2 h-2 rounded-full ${dotColor}`} aria-hidden="true" />
-            <span className="text-xs font-semibold tabular-nums text-gray-400 dark:text-gray-500">
+            <span className="text-xs font-semibold tabular-nums text-gray-400 dark:text-gray-500" aria-hidden="true">
               {clampedUrgency}/5
             </span>
           </span>
@@ -68,10 +95,13 @@ export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, source
         <blockquote
           className={[
             'border-l-2 border-gray-400 dark:border-gray-500 pl-3 mb-2.5',
-            onScrollToArticle ? 'cursor-pointer group' : ''
+            onScrollToArticle ? 'cursor-pointer group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-400 rounded' : ''
           ].join(' ')}
+          role={onScrollToArticle ? 'button' : undefined}
+          tabIndex={onScrollToArticle ? 0 : undefined}
+          aria-label={onScrollToArticle ? 'Jump to this passage in the article' : undefined}
           onClick={onScrollToArticle}
-          title={onScrollToArticle ? 'Jump to this passage in the article' : undefined}
+          onKeyDown={onScrollToArticle ? handleExcerptKeyDown : undefined}
         >
           <p className={[
             'text-xs italic text-gray-700 dark:text-gray-300 leading-relaxed',
@@ -91,6 +121,7 @@ export function FlagCard({ urgency, flag, confidence, excerpt, reasoning, source
           {reasoning.length > 100 && (
             <button
               onClick={() => setExpanded(e => !e)}
+              aria-expanded={expanded}
               className="text-xs text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 mt-1 font-medium"
             >
               {expanded ? 'Show less' : 'Show more'}

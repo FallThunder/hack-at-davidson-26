@@ -1,6 +1,6 @@
 export function SkeletonCard() {
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+    <div aria-hidden="true" className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded skeleton-shimmer" />
@@ -19,7 +19,7 @@ export function SkeletonCard() {
 
 export function SkeletonSiteProfile() {
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+    <div aria-hidden="true" className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div className="flex items-start justify-between mb-3">
         <div className="space-y-1.5">
           <div className="h-3.5 w-28 rounded skeleton-shimmer" />
@@ -52,7 +52,7 @@ export function SkeletonSiteProfile() {
 
 export function SkeletonFlagCard() {
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+    <div aria-hidden="true" className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-1">
           <div className="w-2 h-2 rounded-full skeleton-shimmer shrink-0" />

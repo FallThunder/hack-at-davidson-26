@@ -78,8 +78,16 @@ export function TrustMeter({ score, tier, components }) {
   const showBreakdown = ringHovered && segments != null
 
   return (
-    <div className="flex flex-col items-center py-5 motion-safe:animate-fade-in-up">
-      <div className="relative w-52 h-52">
+    <div
+      className="flex flex-col items-center py-5 motion-safe:animate-fade-in-up"
+      aria-label={`Trust Score: ${score} out of 100. ${tierLabel}.`}
+    >
+      <div
+        className="relative w-52 h-52"
+        tabIndex={segments ? 0 : undefined}
+        onFocus={segments ? () => setRingHovered(true) : undefined}
+        onBlur={segments ? () => { setRingHovered(false); setHoveredKey(null) } : undefined}
+      >
         <svg viewBox="0 0 140 140" className="w-full h-full" aria-hidden="true">
           {/*
             Outer <g> owns the circular hover boundary. The transparent filled circle
@@ -203,7 +211,7 @@ export function TrustMeter({ score, tier, components }) {
           className="text-xs text-gray-300 dark:text-gray-600 mt-0.5"
           style={{ opacity: ringHovered ? 0 : 1, transition: 'opacity 0.3s ease' }}
         >
-          Hover ring to see breakdown
+          Hover or focus ring to see breakdown
         </p>
       )}
     </div>

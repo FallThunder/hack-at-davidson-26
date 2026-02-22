@@ -1,5 +1,7 @@
-// Firefox detection: Firefox exposes a global `browser` object; Chrome does not.
-const isFirefox = typeof browser !== 'undefined'
+// Firefox detection: check for chrome.sidePanel, which is Chrome-only.
+// Using `typeof browser !== 'undefined'` is no longer reliable — Chrome MV3 now
+// ships a `browser` alias for `chrome`, so that check returns true in both browsers.
+const isFirefox = !chrome.sidePanel
 
 // Register click-to-open behavior on install/update (persists across service worker restarts)
 // In Firefox, sidebar_action handles the click behavior automatically — no equivalent API needed.
@@ -7,24 +9,40 @@ chrome.runtime.onInstalled.addListener(() => {
   if (!isFirefox) chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error)
 })
 
-// Close the side panel when the user navigates to a new URL (different article).
+// Close the panel/sidebar when the user navigates to a new URL (different article).
+// The user must deliberately reopen it to analyze the new page.
 // Same-URL refreshes keep the panel open and re-analyze.
-// changeInfo.url fires on navigation; changeInfo.status === 'complete' catches
-// same-URL refreshes where the URL doesn't change but the page reloads.
+//
+// changeInfo.url and changeInfo.status === 'complete' arrive as SEPARATE events for the
+// same navigation, so we track which tabs recently changed URL to suppress the subsequent
+// status='complete' event (which would otherwise send a spurious PAGE_NAVIGATED).
+const recentlyNavigatedTabs = new Set()
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!tab.active) return
   if (changeInfo.url) {
+    recentlyNavigatedTabs.add(tabId)
     if (!isFirefox) {
-      // Chrome: close the panel so the user can choose when to open it on the new article
+      // Chrome: the manifest's default_path keeps the panel globally "known", so
+      // setOptions({ enabled: false }) alone can race against Chrome re-instating it.
+      // Also disable openPanelOnActionClick so Chrome stops auto-managing the panel,
+      // then reset the panel UI via closeSidebar so the user must deliberately reopen.
+      chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {})
       chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => {})
+      chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', closeSidebar: true }).catch(() => {})
     } else {
-      // Firefox: can't close the sidebar programmatically — send PAGE_NAVIGATED so the
-      // sidebar stays open and automatically re-analyzes the new article
-      chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {})
+      // Firefox: reset the sidebar UI — sidebarAction.close() requires a user gesture
+      // so we reset to idle state and require the user to deliberately click Analyze.
+      chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', closeSidebar: true }).catch(() => {})
     }
   } else if (changeInfo.status === 'complete') {
-    // Same-URL refresh — keep panel open and re-analyze
-    chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: tab.url }).catch(() => {})
+    if (recentlyNavigatedTabs.has(tabId)) {
+      // This completion belongs to a URL-change navigation already handled above — skip it
+      recentlyNavigatedTabs.delete(tabId)
+    } else {
+      // Same-URL refresh — keep panel open and re-analyze
+      chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: tab.url }).catch(() => {})
+    }
   }
 })
 
@@ -44,6 +62,10 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 chrome.action.onClicked.addListener((tab) => {
   if (!tab.id) return
   if (!isFirefox) {
+    // Re-enable openPanelOnActionClick (may have been disabled on navigation), then open.
+    // Do NOT await these — awaiting consumes the user gesture token and causes:
+    // "sidePanel.open() may only be called in response to a user gesture".
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {})
     chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel/index.html', enabled: true }).catch(() => {})
     chrome.sidePanel.open({ tabId: tab.id }).catch(console.error)
   } else {
@@ -67,7 +89,7 @@ chrome.runtime.onConnect.addListener((port) => {
 
 // Relay messages: side panel sends { target: 'content', ...rest }
 // Service worker finds the active tab and forwards to its content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Content script → side panel: content scripts can't target extension pages directly
   if (message.target === 'sidepanel') {
     const { target, ...rest } = message

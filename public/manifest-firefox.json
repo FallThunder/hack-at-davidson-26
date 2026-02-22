@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Evident",
-  "version": "2.1.4",
+  "version": "2.2.0",
   "description": "Media bias and fact-checking overlay for news articles.",
   "browser_specific_settings": {
     "gecko": {

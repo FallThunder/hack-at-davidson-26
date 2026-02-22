@@ -80,3 +80,10 @@ export async function saveUserDomain(domain) {
     await chrome.storage.local.set({ evidentUserDomains: [...existing, domain] })
   }
 }
+
+// Remove a domain from the user's personal list.
+export async function removeUserDomain(domain) {
+  if (typeof chrome === 'undefined' || !chrome.storage) return
+  const existing = await getUserDomains()
+  await chrome.storage.local.set({ evidentUserDomains: existing.filter(d => d !== domain) })
+}

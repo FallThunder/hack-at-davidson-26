@@ -1,6 +1,6 @@
 import logoUrl from '../../../public/evident-nobg.png'
 
-export function Header({ darkMode, onToggleDarkMode }) {
+export function Header({ darkMode, onToggleDarkMode, onOpenSettings }) {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
       <div className="flex items-center gap-2.5">
@@ -10,11 +10,28 @@ export function Header({ darkMode, onToggleDarkMode }) {
         </span>
       </div>
 
-      <button
-        onClick={onToggleDarkMode}
-        className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-      >
+      <div className="flex items-center gap-1">
+        <button
+          onClick={onOpenSettings}
+          className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          aria-label="Manage news sites"
+        >
+          {/* Sliders icon */}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+            <circle cx="9" cy="6" r="2" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="12" r="2" fill="currentColor" stroke="none" />
+            <circle cx="9" cy="18" r="2" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+
+        <button
+          onClick={onToggleDarkMode}
+          className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
         {darkMode ? (
           // Sun icon
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -34,7 +51,8 @@ export function Header({ darkMode, onToggleDarkMode }) {
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
           </svg>
         )}
-      </button>
+        </button>
+      </div>
     </div>
   )
 }

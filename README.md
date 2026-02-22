@@ -9,7 +9,7 @@ Detect bias. Verify claims. Understand truth — at a glance.
 <br>
 
 ![Hackathon](https://img.shields.io/badge/Hack@Davidson-2026-blue.svg)
-![Version](https://img.shields.io/badge/version-2.1.3-orange.svg)
+![Version](https://img.shields.io/badge/version-2.2.0-orange.svg)
 ![Chrome](https://img.shields.io/badge/platform-Chrome-green.svg)
 ![Firefox](https://img.shields.io/badge/platform-Firefox-orange.svg)
 ![AI](https://img.shields.io/badge/powered%20by-Claude%20Opus-purple.svg)
@@ -54,7 +54,7 @@ The extension uses a **live backend** (`factcheck2.coredoes.dev`) that analyzes 
 
 | Event | Chrome | Firefox |
 |---|---|---|
-| Navigate to new URL | Side panel closes; reopen manually | Sidebar stays open, auto-reanalyzes new article |
+| Navigate to new URL | Side panel resets to idle; must click Analyze on new article | Sidebar resets to idle; must click Analyze on new article |
 | Click toolbar icon | Opens side panel | Toggles sidebar open/close |
 | Close panel/sidebar | All highlights removed | All highlights removed |
 
@@ -62,6 +62,7 @@ The extension uses a **live backend** (`factcheck2.coredoes.dev`) that analyzes 
 
 ## Features
 
+- **Manage news sites** — settings panel (sliders icon in header) lets you add custom domains, remove them, or browse the full built-in list; user-added sites persist across sessions
 - **Streaming UI** — shimmer skeleton cards fill in progressively as results arrive; cycling status messages keep you informed while loading
 - **Trust Meter** — animated spinning arc while analyzing, then animated SVG arc + count-up number, color-coded by tier (red / orange / yellow / green)
 - **Inline highlights** — urgency-coded spans injected directly into article text; beat any page `!important` CSS via inline style priority; hover triggers a holographic iridescent shimmer effect

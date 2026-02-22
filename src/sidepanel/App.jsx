@@ -3,6 +3,7 @@ import { useAnalysis } from './hooks/useAnalysis.js'
 import { saveUserDomain } from '../utils/newsDomains.js'
 import { useHighlights } from './hooks/useHighlights.js'
 import { Header } from './components/Header.jsx'
+import { ManageSites } from './components/ManageSites.jsx'
 import { SiteProfile } from './components/SiteProfile.jsx'
 import { TrustMeter } from './components/TrustMeter.jsx'
 import { DimensionCard } from './components/DimensionCard.jsx'
@@ -44,10 +45,11 @@ function getInitialDarkMode() {
 export function App() {
   // Dark mode: persisted in localStorage, fallback to system preference
   const [darkMode, setDarkMode] = useState(getInitialDarkMode)
+  const [showSettings, setShowSettings] = useState(false)
   // Original-array index of the flag that was clicked in the article
   const [activeFlag, setActiveFlag] = useState(null)
 
-  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, analysisProgress, error } = useAnalysis()
+  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, reset, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, analysisProgress, error } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags, darkMode)
 
   const [statusMsgIdx, setStatusMsgIdx] = useState(0)
@@ -107,6 +109,14 @@ export function App() {
         setActiveFlag(message.flagIndex)
       }
       if (message.type === 'PAGE_NAVIGATED') {
+        if (message.closeSidebar) {
+          // Firefox: sidebarAction.close() requires a user gesture and won't work here.
+          // Reset to idle instead — user must deliberately click Analyze on the new page.
+          setActiveFlag(null)
+          resetHighlights()
+          reset()
+          return
+        }
         setActiveFlag(null)
         resetHighlights()
         startAnalysis(message.source === 'tabSwitch')
@@ -114,7 +124,7 @@ export function App() {
     }
     chrome.runtime.onMessage.addListener(handler)
     return () => chrome.runtime.onMessage.removeListener(handler)
-  }, [resetHighlights, startAnalysis])
+  }, [resetHighlights, startAnalysis, reset])
 
   // Reset active flag when a new set of flags arrives
   useEffect(() => {
@@ -145,7 +155,8 @@ export function App() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
-      <Header darkMode={darkMode} onToggleDarkMode={() => setDarkMode(d => !d)} />
+      <Header darkMode={darkMode} onToggleDarkMode={() => setDarkMode(d => !d)} onOpenSettings={() => setShowSettings(true)} />
+      {showSettings && <ManageSites onClose={() => setShowSettings(false)} />}
 
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4">
@@ -155,6 +166,25 @@ export function App() {
             <p className="text-xs text-gray-400 dark:text-gray-500 truncate px-0.5" title={article.url}>
               {article.url}
             </p>
+          )}
+
+          {/* Idle — shown after navigating to a new page in Firefox (sidebar can't auto-close) */}
+          {status === 'idle' && (
+            <div className="flex flex-col items-center justify-center text-center py-16 px-4 gap-3">
+              <svg className="w-10 h-10 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Ready to analyze this article.
+              </p>
+              <button
+                onClick={() => startAnalysis()}
+                className="mt-1 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white text-sm font-medium transition-colors duration-150"
+              >
+                Analyze
+              </button>
+            </div>
           )}
 
           {/* Unsupported page */}

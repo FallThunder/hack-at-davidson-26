@@ -270,5 +270,21 @@ export function useAnalysis() {
     if (shouldContinue) pollIntervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
   }, [])
 
-  return { ...state, startAnalysis }
+  // Reset to idle without starting analysis — used when the page navigates away
+  // so the user must deliberately click Analyze on the new page.
+  const reset = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+    if (slowTimeoutRef.current) {
+      clearTimeout(slowTimeoutRef.current)
+      slowTimeoutRef.current = null
+    }
+    publisherDataRef.current = null
+    runIdRef.current++  // invalidate any in-flight async callbacks
+    dispatch({ type: 'RESET' })
+  }, [])
+
+  return { ...state, startAnalysis, reset }
 }

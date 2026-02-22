@@ -117,7 +117,7 @@ async function publisher(url: string): Promise<Response> {
             const msg = anthropic.messages.stream({
                 model: "claude-haiku-4-5",
                 tools: [{
-                    type: "web_search_20250305",
+                    type: "web_search_20260209",
                     name: "web_search",
                     max_uses: 5
                 }],
@@ -211,7 +211,7 @@ async function analyze(url: string, text: string): Promise<Response> {
         const msg = anthropic.messages.stream({
             model: "claude-opus-4-6",
             tools: [{
-                type: "web_search_20250305",
+                type: "web_search_20260209",
                 name: "web_search",
                 max_uses: 5
             }],

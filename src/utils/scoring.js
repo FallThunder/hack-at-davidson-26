@@ -143,7 +143,7 @@ export function computeTrustScoreFromFlags(flags, siteProfile = null) {
   const components = [
     { key: 'publisher',  label: 'Pub.',   fullLabel: 'Publisher',      weight: 0.25, score: publisherScore,
       delta: publisherScore != null ? Math.round((publisherScore - 50) * 0.40) : null },
-    { key: 'neutrality', label: 'Bias',   fullLabel: 'Political Bias', weight: 0.15, score: neutralityScore,
+    { key: 'neutrality', label: 'Bias',   fullLabel: 'Bias Neutrality', weight: 0.15, score: neutralityScore,
       delta: neutralityScore != null ? -Math.round((100 - neutralityScore) * 0.12) : null },
     { key: 'factuality', label: 'Facts',  fullLabel: 'Factuality',     weight: 0.25, score: factualityScore,
       delta: factualityAdj },

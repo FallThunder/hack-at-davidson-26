@@ -9,8 +9,8 @@ export function HighlightToggle({ visible, onToggle, disabled }) {
           disabled
             ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
             : visible
-            ? 'bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white shadow-sm'
-            : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+            ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+            : 'bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white shadow-sm'
         ].join(' ')}
       >
         {disabled

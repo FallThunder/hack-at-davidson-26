@@ -255,7 +255,7 @@ export function App() {
 
           {/* Trust Meter — skeleton while analyzing, real meter once score arrives */}
           {trustScore ? (
-            <TrustMeter score={trustScore.score} tier={trustScore.tier} />
+            <TrustMeter score={trustScore.score} tier={trustScore.tier} components={trustScore.components} />
           ) : isAnalyzing && (
             <div className="flex flex-col items-center py-5">
               <div className="relative w-36 h-36">

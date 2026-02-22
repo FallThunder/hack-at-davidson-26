@@ -4,6 +4,7 @@ import { extractArticle } from '../utils/articleExtractor.js'
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 let evidentFlags = []
+let highlightsVisible = true
 let popover = null
 let popoverOpen = false
 let tooltipEl = null
@@ -296,9 +297,10 @@ function applyHighlights(highlights) {
       span.setAttribute('data-evident-flag-index', String(index))
       span.style.setProperty('background-color', URGENCY_BG[u], 'important')
       span.style.setProperty('border-bottom', URGENCY_BORDER[u], 'important')
-      span.addEventListener('mouseenter', () => showTooltip(tooltipText, span.getBoundingClientRect()))
+      span.addEventListener('mouseenter', () => { if (highlightsVisible) showTooltip(tooltipText, span.getBoundingClientRect()) })
       span.addEventListener('mouseleave', hideTooltip)
       span.addEventListener('click', (event) => {
+        if (!highlightsVisible) return
         event.stopPropagation()
         hideTooltip()
         const flagIdx = parseInt(span.getAttribute('data-evident-flag-index'), 10)
@@ -344,8 +346,21 @@ function applyHighlights(highlights) {
 }
 
 function toggleHighlights(visible) {
-  document.querySelectorAll('[data-evident-highlight]').forEach(el => {
-    el.style.display = visible ? '' : 'none'
+  highlightsVisible = visible
+  document.querySelectorAll('[data-evident-highlight]').forEach(span => {
+    if (visible) {
+      const urgencyStr = span.getAttribute('data-evident-highlight') // "urgency-N"
+      const u = Math.min(Math.max(parseInt(urgencyStr.replace('urgency-', ''), 10), 1), 5)
+      span.style.setProperty('background-color', URGENCY_BG[u], 'important')
+      span.style.setProperty('border-bottom', URGENCY_BORDER[u], 'important')
+      span.style.removeProperty('color')
+      span.style.removeProperty('pointer-events')
+    } else {
+      span.style.setProperty('background-color', 'transparent', 'important')
+      span.style.setProperty('border-bottom', 'none', 'important')
+      span.style.setProperty('color', 'inherit', 'important')
+      span.style.setProperty('pointer-events', 'none', 'important')
+    }
   })
   if (!visible) { hidePopover(); hideTooltip() }
 }

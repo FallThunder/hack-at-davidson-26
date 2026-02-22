@@ -1,6 +1,10 @@
+// Firefox detection: Firefox exposes a global `browser` object; Chrome does not.
+const isFirefox = typeof browser !== 'undefined'
+
 // Register click-to-open behavior on install/update (persists across service worker restarts)
+// In Firefox, sidebar_action handles the click behavior automatically — no equivalent API needed.
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error)
+  if (!isFirefox) chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error)
 })
 
 // Close the side panel when the user navigates to a new URL (different article).
@@ -10,8 +14,14 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!tab.active) return
   if (changeInfo.url) {
-    // New URL — close the panel so the user can choose when to open it
-    chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => {})
+    if (!isFirefox) {
+      // Chrome: close the panel so the user can choose when to open it on the new article
+      chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => {})
+    } else {
+      // Firefox: can't close the sidebar programmatically — send PAGE_NAVIGATED so the
+      // sidebar stays open and automatically re-analyzes the new article
+      chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: changeInfo.url }).catch(() => {})
+    }
   } else if (changeInfo.status === 'complete') {
     // Same-URL refresh — keep panel open and re-analyze
     chrome.runtime.sendMessage({ type: 'PAGE_NAVIGATED', url: tab.url }).catch(() => {})
@@ -25,13 +35,20 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   })
 })
 
-// Also open explicitly when the toolbar icon is clicked (covers first-run and fallback)
-// Do NOT await setOptions before open — awaiting consumes the user gesture token and
-// causes "sidePanel.open() may only be called in response to a user gesture".
+// Open/toggle the panel when the toolbar icon is clicked.
+// Chrome: open the side panel (covers first-run and fallback).
+// Firefox: toggle the sidebar — sidebar_action handles the default open behavior,
+//   but this gives an explicit toggle from the toolbar icon too.
+// Do NOT await setOptions before open in Chrome — awaiting consumes the user gesture token
+// and causes "sidePanel.open() may only be called in response to a user gesture".
 chrome.action.onClicked.addListener((tab) => {
   if (!tab.id) return
-  chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel/index.html', enabled: true }).catch(() => {})
-  chrome.sidePanel.open({ tabId: tab.id }).catch(console.error)
+  if (!isFirefox) {
+    chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel/index.html', enabled: true }).catch(() => {})
+    chrome.sidePanel.open({ tabId: tab.id }).catch(console.error)
+  } else {
+    browser.sidebarAction.toggle().catch(console.error)
+  }
 })
 
 // Detect side panel close via long-lived port and clear highlights.

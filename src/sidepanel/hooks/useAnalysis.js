@@ -134,7 +134,8 @@ export function useAnalysis() {
 
     // Only analyzable URLs are http/https pages
     const url = article.url ?? ''
-    if (!url || url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:')) {
+    if (!url || url.startsWith('chrome://') || url.startsWith('chrome-extension://')
+        || url.startsWith('moz-extension://') || url.startsWith('about:')) {
       dispatch({ type: 'UNSUPPORTED' })
       return
     }

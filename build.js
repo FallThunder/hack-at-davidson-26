@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 /**
  * Evident extension build script.
- * Produces:
- *   dist/manifest.json
- *   dist/icons/icon{16,48,128}.png
- *   dist/sidepanel/index.html + assets/
- *   dist/background/service-worker.js
- *   dist/content/content.js
- *   dist/content/highlight.css
+ *
+ * Usage:
+ *   node build.js              → Chrome build → dist/
+ *   BROWSER=firefox node build.js → Firefox build → dist-firefox/
+ *
+ * Produces (in the target outDir):
+ *   manifest.json
+ *   icons/icon{16,48,128}.png
+ *   sidepanel/index.html + assets/
+ *   background/service-worker.js
+ *   content/content.js
+ *   content/highlight.css
  */
 import { build } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -16,6 +21,10 @@ import { fileURLToPath } from 'url'
 import { copyFileSync, mkdirSync, rmSync, existsSync, readdirSync } from 'fs'
 
 const root = fileURLToPath(new URL('.', import.meta.url))
+const BROWSER = process.env.BROWSER || 'chrome'
+const isFirefox = BROWSER === 'firefox'
+const outDir = resolve(root, isFirefox ? 'dist-firefox' : 'dist')
+const manifestSrc = resolve(root, isFirefox ? 'public/manifest-firefox.json' : 'public/manifest.json')
 
 function ensureDir(dir) {
   mkdirSync(dir, { recursive: true })
@@ -31,9 +40,9 @@ function copyDir(src, dest) {
   }
 }
 
-// Clean dist
-if (existsSync(resolve(root, 'dist'))) {
-  rmSync(resolve(root, 'dist'), { recursive: true })
+// Clean output directory
+if (existsSync(outDir)) {
+  rmSync(outDir, { recursive: true })
 }
 
 // ─── 1. Side panel ────────────────────────────────────────────────────────────
@@ -44,7 +53,7 @@ await build({
   root,
   publicDir: false,
   build: {
-    outDir: resolve(root, 'dist'),
+    outDir,
     emptyOutDir: false,
     rollupOptions: {
       input: { sidepanel: resolve(root, 'src/sidepanel/index.html') },
@@ -66,7 +75,7 @@ await build({
   root,
   publicDir: false,
   build: {
-    outDir: resolve(root, 'dist/content'),
+    outDir: resolve(outDir, 'content'),
     emptyOutDir: false,
     lib: {
       entry: resolve(root, 'src/content/content.js'),
@@ -81,10 +90,10 @@ await build({
   logLevel: 'warn'
 })
 // Copy highlight.css separately (it's a standalone CSS file, not imported by content.js)
-ensureDir(resolve(root, 'dist/content'))
+ensureDir(resolve(outDir, 'content'))
 copyFileSync(
   resolve(root, 'src/content/highlight.css'),
-  resolve(root, 'dist/content/highlight.css')
+  resolve(outDir, 'content/highlight.css')
 )
 console.log('✔ Content script built')
 
@@ -95,7 +104,7 @@ await build({
   root,
   publicDir: false,
   build: {
-    outDir: resolve(root, 'dist/background'),
+    outDir: resolve(outDir, 'background'),
     emptyOutDir: false,
     lib: {
       entry: resolve(root, 'src/background/service-worker.js'),
@@ -110,14 +119,14 @@ await build({
 })
 console.log('✔ Service worker built')
 
-// ─── 4. Copy static assets to dist root ──────────────────────────────────────
-copyFileSync(resolve(root, 'public/manifest.json'), resolve(root, 'dist/manifest.json'))
-copyDir(resolve(root, 'public/icons'), resolve(root, 'dist/icons'))
+// ─── 4. Copy static assets ────────────────────────────────────────────────────
+copyFileSync(manifestSrc, resolve(outDir, 'manifest.json'))
+copyDir(resolve(root, 'public/icons'), resolve(outDir, 'icons'))
 // Use nobg logo for extension icons (toolbar, etc.)
 const nobgPath = resolve(root, 'public/evident-nobg.png')
 if (existsSync(nobgPath)) {
   for (const size of [16, 48, 128]) {
-    copyFileSync(nobgPath, resolve(root, 'dist/icons', `icon${size}.png`))
+    copyFileSync(nobgPath, resolve(outDir, 'icons', `icon${size}.png`))
   }
 }
 // Score-colored icons for toolbar (setIcon by tier; same size keys as default_icon)
@@ -130,21 +139,26 @@ for (const { tier, file } of tierIcons) {
   const src = resolve(root, 'public', file)
   if (existsSync(src)) {
     for (const size of [16, 48]) {
-      copyFileSync(src, resolve(root, 'dist/icons', `icon${size}-${tier}.png`))
+      copyFileSync(src, resolve(outDir, 'icons', `icon${size}-${tier}.png`))
     }
   }
 }
 
 // ─── 5. Fix sidepanel index.html location ─────────────────────────────────────
-// Vite outputs HTML relative to project root, so it lands at dist/src/sidepanel/index.html.
-// Move it to dist/sidepanel/index.html to match the manifest's default_path.
-const htmlFromRoot = resolve(root, 'dist/src/sidepanel/index.html')
-const htmlTarget = resolve(root, 'dist/sidepanel/index.html')
+// Vite outputs HTML relative to project root, so it lands at <outDir>/src/sidepanel/index.html.
+// Move it to <outDir>/sidepanel/index.html to match the manifest's default_path.
+const htmlFromRoot = resolve(outDir, 'src/sidepanel/index.html')
+const htmlTarget = resolve(outDir, 'sidepanel/index.html')
 if (existsSync(htmlFromRoot)) {
-  ensureDir(resolve(root, 'dist/sidepanel'))
+  ensureDir(resolve(outDir, 'sidepanel'))
   copyFileSync(htmlFromRoot, htmlTarget)
-  rmSync(resolve(root, 'dist/src'), { recursive: true })
+  rmSync(resolve(outDir, 'src'), { recursive: true })
 }
 
-console.log('\n✅ All builds complete.')
-console.log('   Load /dist as unpacked extension in Chrome.')
+const targetDirName = isFirefox ? 'dist-firefox' : 'dist'
+const loadInstructions = isFirefox
+  ? `   Load /${targetDirName} in Firefox: about:debugging → Load Temporary Add-on → select manifest.json`
+  : `   Load /${targetDirName} as unpacked extension in Chrome.`
+
+console.log(`\n✅ All builds complete (${BROWSER}).`)
+console.log(loadInstructions)

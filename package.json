@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "node build.js",
     "build": "node build.js",
-    "zip": "npm run build && zip -r evident.zip dist/"
+    "build:chrome": "node build.js",
+    "build:firefox": "BROWSER=firefox node build.js",
+    "zip": "npm run build && zip -r evident.zip dist/",
+    "zip:chrome": "npm run build:chrome && zip -r evident-chrome.zip dist/",
+    "zip:firefox": "npm run build:firefox && zip -r evident-firefox.zip dist-firefox/"
   },
   "dependencies": {
     "react": "^18.3.1",

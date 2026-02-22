@@ -12,7 +12,7 @@ Detect bias. Verify claims. Understand truth — at a glance.
 ![Version](https://img.shields.io/badge/version-2.1.3-orange.svg)
 ![Chrome](https://img.shields.io/badge/platform-Chrome-green.svg)
 ![Firefox](https://img.shields.io/badge/platform-Firefox-orange.svg)
-![AI](https://img.shields.io/badge/powered%20by-Claude%20Sonnet-purple.svg)
+![AI](https://img.shields.io/badge/powered%20by-Claude%20Opus-purple.svg)
 
 <br>
 
@@ -30,13 +30,12 @@ Detect bias. Verify claims. Understand truth — at a glance.
 
 ## What It Does
 
-Evident is a browser extension (Chrome and Firefox) that analyzes news articles across **6 trust dimensions** and surfaces inline sentence-level flags directly on the page — without interrupting your reading.
+Evident is a browser extension (Chrome and Firefox) that analyzes news articles for bias, factual accuracy, and rhetorical manipulation — surfacing inline sentence-level flags directly on the page without interrupting your reading.
 
-Click the Evident icon → a side panel streams in:
+Click the Evident icon → a side panel loads:
 
 - A **Trust Score** (0–100) with animated arc gauge
-- **Site profile** — political bias bar, factual reporting rating, tone
-- **6 dimension cards** — fact-checking, rhetoric, headline accuracy, statistics, source diversity, emotional arc
+- **Site profile** — political bias bar, factual reporting rating, tone, factuality
 - **Fact flags** — color-coded sentence highlights (yellow/orange/red by urgency) with confidence %, reasoning, and sources
 
 Highlighted sentences are interactive: hover for a tooltip, click for a full card. Clicking a flag card in the panel scrolls and pulses the matching sentence in the article.
@@ -45,7 +44,7 @@ Highlighted sentences are interactive: hover for a tooltip, click for a full car
 
 ## Current State
 
-The extension uses a **live backend** (`factcheck2.coredoes.dev`) that analyzes any news article via Claude Sonnet. Analysis is cached server-side, so revisiting an article is near-instant.
+The extension uses a **live backend** (`factcheck2.coredoes.dev`) that analyzes any news article via Claude Opus. Analysis is cached server-side, so revisiting an article is near-instant.
 
 - First visit to an article: analysis streams in (publisher profile first, then flags once ready)
 - Subsequent visits or tab switches: results are restored instantly from the local extension cache — no API call made
@@ -130,7 +129,7 @@ Then load `dist-firefox/manifest.json` via `about:debugging` → Load Temporary 
 |-------|-----------|
 | Extension | Chrome Manifest V3 + Firefox MV3 (`sidebar_action`) |
 | Side panel UI | React 18 + Vite 5 + Tailwind CSS 3.4 |
-| Analysis API | Claude Sonnet via live backend at `factcheck2.coredoes.dev` |
+| Analysis API | Claude Haiku (publisher) + Claude Opus (analysis) via live backend at `factcheck2.coredoes.dev` |
 | Build | Three-pass Vite `build()` in `build.js` (side panel, content script IIFE, service worker ESM/IIFE) |
 | State | `useReducer` state machine; per-session URL cache avoids redundant API calls on tab switch |
 | Text matching | Jaccard word similarity (threshold 0.5) with cross-node DOM range wrapping |
@@ -172,10 +171,14 @@ Then load `dist-firefox/manifest.json` via `about:debugging` → Load Temporary 
 
 ## Trust Score Formula
 
-```
-TrustScore = factCheck×0.25 + rhetoric×0.20 + headlineAccuracy×0.15
-           + statistics×0.15 + sourceDiversity×0.15 + emotionalArc×0.10
-```
+Starts at 100, then applies additive adjustments:
+
+1. **Publisher factual reporting** — up to ±20 pts based on MBFC factual reporting score
+2. **Political bias neutrality** — up to −12 pts based on distance from center on MBFC bias scale
+3. **Content factuality** — up to ±30 pts based on overall factuality rating
+4. **Content tone** — up to −20 pts based on overall tone rating
+5. **Per-flag deductions** — each flag deducts points scaled by urgency and confidence
+
 
 - **85–100** High Trust (green)
 - **70–84** Mostly Reliable (yellow)

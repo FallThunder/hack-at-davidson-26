@@ -98,6 +98,8 @@ copyFileSync(
 console.log('✔ Content script built')
 
 // ─── 3. Service worker ────────────────────────────────────────────────────────
+// Chrome: ES module format (service_worker with "type": "module")
+// Firefox: IIFE format (background.scripts — event page, no ES module support)
 console.log('▶ Building service worker…')
 await build({
   configFile: false,
@@ -108,7 +110,8 @@ await build({
     emptyOutDir: false,
     lib: {
       entry: resolve(root, 'src/background/service-worker.js'),
-      formats: ['es'],
+      formats: [isFirefox ? 'iife' : 'es'],
+      name: isFirefox ? 'EvidentBackground' : undefined,
       fileName: () => 'service-worker.js'
     },
     rollupOptions: {

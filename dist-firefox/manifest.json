@@ -26,8 +26,7 @@
     "default_title": "Evident Analysis"
   },
   "background": {
-    "service_worker": "background/service-worker.js",
-    "type": "module"
+    "scripts": ["background/service-worker.js"]
   },
   "content_scripts": [
     {

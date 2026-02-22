@@ -15,8 +15,8 @@
         <p class="font-semibold text-center">Evident is a browser extension for Chrome and Firefox (and derivatives) <br> that automatically analyzes news articles in-browser for factual accuracy and bias.</p>
 
         <div class="flex flex-row gap-2 items-center justify-center">
-            <a class="bg-white px-4 py-2 text-black font-semibold" href="/evident-chrome.zip">Download for Chrome</a>
-            <a class="bg-white px-4 py-2 text-black font-semibold" href="/evident-firefox.zip">Download for Firefox</a>
+            <a class="bg-white px-4 py-2 text-black font-semibold" href="https://github.com/FallThunder/hack-at-davidson-26/releases/download/v2.3.0/evident-chrome.zip">Download for Chrome</a>
+            <a class="bg-white px-4 py-2 text-black font-semibold" href="https://github.com/FallThunder/hack-at-davidson-26/releases/download/v2.3.0/evident-firefox.zip">Download for Firefox</a>
         </div>
     </div>
 </div>

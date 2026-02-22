@@ -9,6 +9,13 @@ let popover = null
 let popoverOpen = false
 let tooltipEl = null
 
+// Hide the tooltip whenever the tab goes into the background — prevents it
+// from getting stuck after middle-click or right-click → "Open in new tab",
+// which bypass the span's click handler so hideTooltip() never fires.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) hideTooltip()
+})
+
 // Normalize curly/smart quotes to straight ASCII equivalents for matching
 function normalizeQuotes(str) {
   return str
@@ -299,6 +306,9 @@ function applyHighlights(highlights) {
       span.style.setProperty('border-bottom', URGENCY_BORDER[u], 'important')
       span.addEventListener('mouseenter', () => { if (highlightsVisible) showTooltip(tooltipText, span.getBoundingClientRect()) })
       span.addEventListener('mouseleave', hideTooltip)
+      // Middle-click and right-click bypass the click handler — hide tooltip explicitly
+      span.addEventListener('auxclick', hideTooltip)
+      span.addEventListener('contextmenu', hideTooltip)
       span.addEventListener('click', (event) => {
         if (!highlightsVisible) return
         event.stopPropagation()

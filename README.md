@@ -9,7 +9,7 @@ Detect bias. Verify claims. Understand truth — at a glance.
 <br>
 
 ![Hackathon](https://img.shields.io/badge/Hack@Davidson-2026-blue.svg)
-![Version](https://img.shields.io/badge/version-2.2.0-orange.svg)
+![Version](https://img.shields.io/badge/version-2.3.0-orange.svg)
 ![Chrome](https://img.shields.io/badge/platform-Chrome-green.svg)
 ![Firefox](https://img.shields.io/badge/platform-Firefox-orange.svg)
 ![AI](https://img.shields.io/badge/powered%20by-Claude%20Opus-purple.svg)
@@ -37,6 +37,8 @@ Click the Evident icon → a side panel loads:
 - A **Trust Score** (0–100) with animated arc gauge
 - **Site profile** — political bias bar, factual reporting rating, tone, factuality
 - **Fact flags** — color-coded sentence highlights (yellow/orange/red by urgency) with confidence %, reasoning, and sources
+- **Accessibility score** — instant client-side WCAG audit (lang, alt text, heading hierarchy, link labels, button labels, page title)
+- **Audio summary** — one-click spoken briefing via Gemini + ElevenLabs TTS
 
 Highlighted sentences are interactive: hover for a tooltip, click for a full card. Clicking a flag card in the panel scrolls and pulses the matching sentence in the article.
 
@@ -75,6 +77,8 @@ The extension uses a **live backend** (`factcheck2.coredoes.dev`) that analyzes 
 - **Paywall support** — article text extracted from the page is sent directly to the backend, so paywalled articles you've loaded are fully analyzable
 - **Slow response warning** — amber banner appears after 2 minutes if the backend hasn't responded
 - **Clean close** — closing the panel removes all highlights, tooltips, and popovers from the article
+- **Accessibility score** — instant client-side DOM audit runs on article extraction; scores 0–100 (Excellent / Good / Fair / Poor) based on 6 WCAG checks with per-issue detail; no backend required
+- **Audio summary** — "Listen to Summary" button appears after analysis completes; sends results to TTS proxy which calls Gemini 2.5 Flash (spoken prose) then ElevenLabs (Rachel voice); click again to stop
 
 ---
 
@@ -131,9 +135,11 @@ Then load `dist-firefox/manifest.json` via `about:debugging` → Load Temporary 
 | Extension | Chrome Manifest V3 + Firefox MV3 (`sidebar_action`) |
 | Side panel UI | React 18 + Vite 5 + Tailwind CSS 3.4 |
 | Analysis API | Claude Haiku (publisher) + Claude Opus (analysis) via live backend at `factcheck2.coredoes.dev` |
+| TTS proxy | Flask + Gunicorn on Google Cloud Run; Gemini 2.5 Flash (summary) + ElevenLabs `eleven_turbo_v2_5` (audio) |
 | Build | Three-pass Vite `build()` in `build.js` (side panel, content script IIFE, service worker ESM/IIFE) |
 | State | `useReducer` state machine; per-session URL cache avoids redundant API calls on tab switch |
 | Text matching | Jaccard word similarity (threshold 0.5) with cross-node DOM range wrapping |
+| Accessibility audit | Client-side DOM inspection in content script; 6 WCAG checks, no backend |
 
 ---
 
@@ -144,23 +150,37 @@ Then load `dist-firefox/manifest.json` via `about:debugging` → Load Temporary 
   sidepanel/        React SPA (side panel / sidebar)
     App.jsx         Root — orchestrates analysis + message routing
     mockData.js     URL-keyed mock data adapter (reference only)
-    components/     TrustMeter, SiteProfile, DimensionCard, FlagCard, ...
+    components/
+      TrustMeter.jsx    Animated SVG arc gauge + count-up score
+      SiteProfile.jsx   Bias bar, factual reporting bar, tone/factuality
+      FlagCard.jsx      Urgency dot, confidence %, excerpt, reasoning, sources
+      A11yCard.jsx      DOM accessibility score bar + per-issue list
+      DimensionCard.jsx Score badge + label + summary (unused by live API)
+      SkeletonCard.jsx  Shimmer loading placeholders
+      HighlightToggle.jsx Sticky show/hide highlights button
+      ManageSites.jsx   Settings overlay: add/remove domains
+      Header.jsx        Logo + dark mode toggle + settings icon
     hooks/
-      useAnalysis.js   useReducer state machine + live backend polling + URL cache
-      useHighlights.js APPLY / TOGGLE / CLEAR / SCROLL highlight control
+      useAnalysis.js    useReducer state machine + live backend polling + URL cache + a11y audit trigger
+      useHighlights.js  APPLY / TOGGLE / CLEAR / SCROLL highlight control
+      useElevenLabs.js  POST to TTS proxy, play audio/mpeg via Web Audio API
   content/
-    content.js      Article extraction, highlight injection, tooltip + popover
+    content.js      Article extraction, highlight injection, tooltip + popover, a11y audit
     highlight.css   Urgency colors, tooltip, popover styles
   background/
     service-worker.js  Panel open/close, message relay, tab/navigation events
                        (Chrome: ES module; Firefox: IIFE event page)
   utils/
-    scoring.js         Weighted Trust Score formula
+    scoring.js          Weighted Trust Score formula
     articleExtractor.js Heuristic article text extraction
+    newsDomains.js      Built-in allowlist + user-saved domain helpers
 /public/
   manifest.json         Chrome MV3 manifest (side_panel)
   manifest-firefox.json Firefox MV3 manifest (sidebar_action, background.scripts)
   icons/                16, 48, 128px + trust-tier colored variants
+/tts-proxy/             Flask + Gunicorn TTS server (deployed to Google Cloud Run)
+  main.py               POST /tts: Gemini 2.5 Flash → ElevenLabs → audio/mpeg
+  requirements.txt      flask, requests, gunicorn
 /dist/                  Chrome build output (load as unpacked in Chrome)
 /dist-firefox/          Firefox build output (load via about:debugging)
 /exampleFiles/

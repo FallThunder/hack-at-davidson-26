@@ -11,6 +11,7 @@ import { SkeletonCard, SkeletonSiteProfile, SkeletonFlagCard } from './component
 import { FlagCard } from './components/FlagCard.jsx'
 import { HighlightToggle } from './components/HighlightToggle.jsx'
 import { useElevenLabs } from './hooks/useElevenLabs.js'
+import { A11yCard } from './components/A11yCard.jsx'
 
 const OPINION_CATEGORIES = new Set(['Opinion', 'Editorial', 'Commentary'])
 
@@ -50,7 +51,7 @@ export function App() {
   // Original-array index of the flag that was clicked in the article
   const [activeFlag, setActiveFlag] = useState(null)
 
-  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, reset, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, analysisProgress, error } = useAnalysis()
+  const { status, article, siteProfile, dimensions, flags, trustScore, startAnalysis, reset, hasDimensions, unsupportedDomain, notAnArticle, slowWarning, overloadedWarning, analysisProgress, a11yScore, error } = useAnalysis()
   const { highlightsVisible, toggleHighlights, highlightsApplied, scrollToFlag, resetHighlights } = useHighlights(flags, darkMode)
   const { speak, isLoading: isTtsLoading, isPlaying: isTtsPlaying } = useElevenLabs()
 
@@ -366,6 +367,16 @@ export function App() {
                   </p>
                 </div>
               )}
+            </>
+          )}
+
+          {/* Accessibility score — client-side DOM audit, appears shortly after article extraction */}
+          {a11yScore && (
+            <>
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-0.5">
+                Accessibility
+              </p>
+              <A11yCard a11yScore={a11yScore} />
             </>
           )}
 

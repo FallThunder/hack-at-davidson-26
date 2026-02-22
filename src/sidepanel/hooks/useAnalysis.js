@@ -21,6 +21,7 @@ const initialState = {
   slowWarning: false,       // true after 2 minutes without a response
   overloadedWarning: false, // true when backend reports Claude is overloaded
   analysisProgress: null,   // live progress string from backend stream ('Searching the web...', etc.)
+  a11yScore: null,          // { score: 0-100, issues: [] } | null — DOM-based accessibility audit
   error: null
 }
 
@@ -57,6 +58,9 @@ function reducer(state, action) {
 
     case 'ANALYSIS_COMPLETE':
       return { ...state, status: 'complete' }
+
+    case 'A11Y_RECEIVED':
+      return { ...state, a11yScore: action.payload }
 
     case 'RESET':
       return { ...initialState }
@@ -131,6 +135,12 @@ export function useAnalysis() {
 
     const article = articleData ?? { headline: '', url: '', text: '', sentences: [] }
     dispatch({ type: 'ARTICLE_RECEIVED', payload: article })
+
+    // Fire DOM accessibility audit as a side-effect — non-blocking, returns fast
+    sendToContent({ type: 'GET_A11Y' }).then(result => {
+      if (runIdRef.current !== runId) return
+      if (result) dispatch({ type: 'A11Y_RECEIVED', payload: result })
+    })
 
     // Only analyzable URLs are http/https pages
     const url = article.url ?? ''

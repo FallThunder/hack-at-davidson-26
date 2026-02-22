@@ -411,8 +411,73 @@ function clearHighlights() {
   }
 }
 
+function runA11yAudit() {
+  let penalty = 0
+  const issues = []
+
+  // 1. Missing lang attribute on <html>
+  if (!document.documentElement.lang?.trim()) {
+    penalty += 15
+    issues.push({ type: 'lang', message: 'Page is missing a language declaration', count: 1 })
+  }
+
+  // 2. Images without alt text (capped at -20)
+  const imgsNoAlt = [...document.querySelectorAll('img')]
+    .filter(img => !img.hasAttribute('alt') || img.getAttribute('alt') === null)
+  if (imgsNoAlt.length) {
+    const p = Math.min(20, imgsNoAlt.length * 5)
+    penalty += p
+    issues.push({ type: 'img-alt', message: 'Images missing alt text', count: imgsNoAlt.length })
+  }
+
+  // 3. Skipped heading levels
+  const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')]
+    .map(h => parseInt(h.tagName[1]))
+  let skipped = false
+  for (let i = 1; i < headings.length; i++) {
+    if (headings[i] - headings[i - 1] > 1) { skipped = true; break }
+  }
+  if (skipped) {
+    penalty += 10
+    issues.push({ type: 'headings', message: 'Heading levels are skipped', count: 1 })
+  }
+
+  // 4. Links with no/generic text (capped at -15)
+  const genericLinkTexts = new Set(['click here', 'here', 'read more', 'more', 'link', ''])
+  const badLinks = [...document.querySelectorAll('a[href]')]
+    .filter(a => !a.getAttribute('aria-label') && genericLinkTexts.has(a.textContent.trim().toLowerCase()))
+  if (badLinks.length) {
+    const p = Math.min(15, badLinks.length * 5)
+    penalty += p
+    issues.push({ type: 'links', message: 'Links with non-descriptive text', count: badLinks.length })
+  }
+
+  // 5. Buttons with no accessible name (capped at -10)
+  const emptyButtons = [...document.querySelectorAll('button')]
+    .filter(b => !b.textContent.trim() && !b.getAttribute('aria-label') && !b.getAttribute('title'))
+  if (emptyButtons.length) {
+    const p = Math.min(10, emptyButtons.length * 5)
+    penalty += p
+    issues.push({ type: 'buttons', message: 'Buttons with no accessible label', count: emptyButtons.length })
+  }
+
+  // 6. Missing page title
+  if (!document.title?.trim()) {
+    penalty += 10
+    issues.push({ type: 'title', message: 'Page is missing a title', count: 1 })
+  }
+
+  const score = Math.max(0, 100 - penalty)
+  return { score, issues }
+}
+
 // Message listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'GET_A11Y') {
+    sendResponse(runA11yAudit())
+    return true
+  }
+
   if (message.type === 'GET_ARTICLE') {
     try {
       const article = extractArticle(document)

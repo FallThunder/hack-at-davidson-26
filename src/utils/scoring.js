@@ -93,9 +93,10 @@ export function computeTrustScoreFromFlags(flags, siteProfile = null) {
   }
 
   // 2. Political bias penalty (0–100 → 0 to −12 pts)
-  //    Component score: neutrality = 100 − bias (null if unavailable)
+  //    Neutrality = distance from center: 100 − 2×|biasScore − 50|
+  //    Extreme Left (0) or Extreme Right (100) → neutrality 0; Center (50) → neutrality 100
   const neutralityScore = siteProfile?.political_bias?.score != null
-    ? Math.round(100 - siteProfile.political_bias.score)
+    ? Math.round(100 - 2 * Math.abs(siteProfile.political_bias.score - 50))
     : null
   if (neutralityScore != null) {
     score -= (100 - neutralityScore) * 0.12

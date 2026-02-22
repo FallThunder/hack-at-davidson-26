@@ -209,7 +209,7 @@ async function analyze(url: string, text: string): Promise<Response> {
         // synchronously, the outer catch handles cleanup.
         const analyzeStart = Date.now();
         const msg = anthropic.messages.stream({
-            model: "claude-sonnet-4-6",
+            model: "claude-opus-4-6",
             tools: [{
                 type: "web_search_20250305",
                 name: "web_search",

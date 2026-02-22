@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node build.js",
-    "build": "node build.js",
+    "build": "npm run build:chrome && npm run build:firefox",
     "build:chrome": "node build.js",
     "build:firefox": "BROWSER=firefox node build.js",
     "zip": "npm run build && zip -r evident.zip dist/",

@@ -218,6 +218,8 @@ async function analyze(url: string, text: string): Promise<Response> {
             system: `
 You are a rigorous, politically neutral fact-checking engine. You will be given the full text of a news article or opinion piece. Your job is to analyze it and return a structured JSON object.
 
+    The article text may contain non-article content such as titles of related articles, "You might also like" or "Read more" links, sidebar text, or navigation copy. Ignore all such content — only analyze the main article body. Do not flag link text, related article headlines, or promotional copy that appears alongside the article.
+
     Before you analyze the article, determine the source's overall reliability to guide your analysis. If an outlet has historically been unreliable or failed fact checks, be more critical of it. Rely on the site's https://mediabiasfactcheck.com article to determine this information.
 
     Identify EVERY instance of:

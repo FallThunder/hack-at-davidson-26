@@ -14,14 +14,14 @@ export function computeTrustScore(dimensionScores) {
       0
     )
   )
-  const tier = score >= 90 ? 'good' : score >= 80 ? 'mediocre' : score >= 70 ? 'acceptable' : 'poor'
+  const tier = score >= 85 ? 'good' : score >= 70 ? 'mediocre' : score >= 55 ? 'acceptable' : 'poor'
   return { score, tier }
 }
 
 export function getScoreColor(score) {
-  if (score >= 90) return '#22c55e'
-  if (score >= 80) return '#eab308'
-  if (score >= 70) return '#f97316'
+  if (score >= 85) return '#22c55e'
+  if (score >= 70) return '#eab308'
+  if (score >= 55) return '#f97316'
   return '#ef4444'
 }
 
@@ -135,7 +135,7 @@ export function computeTrustScoreFromFlags(flags, siteProfile = null) {
   const claimsScore = Math.max(5, Math.min(100, Math.round(100 - flagPenalty)))
 
   const finalScore = Math.min(100, Math.max(5, Math.round(score)))
-  const tier = finalScore >= 90 ? 'good' : finalScore >= 80 ? 'mediocre' : finalScore >= 70 ? 'acceptable' : 'poor'
+  const tier = finalScore >= 85 ? 'good' : finalScore >= 70 ? 'mediocre' : finalScore >= 55 ? 'acceptable' : 'poor'
 
   // Component breakdown for the ring visualization in TrustMeter.
   // delta: actual pts this component added/subtracted from the 100-pt baseline.

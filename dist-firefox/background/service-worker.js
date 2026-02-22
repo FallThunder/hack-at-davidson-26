@@ -1,0 +1,82 @@
+const l = typeof browser < "u";
+chrome.runtime.onInstalled.addListener(() => {
+  l || chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: !0 }).catch(console.error);
+});
+chrome.tabs.onUpdated.addListener((e, a, t) => {
+  t.active && (a.url ? l ? chrome.runtime.sendMessage({ type: "PAGE_NAVIGATED", url: a.url }).catch(() => {
+  }) : chrome.sidePanel.setOptions({ tabId: e, enabled: !1 }).catch(() => {
+  }) : a.status === "complete" && chrome.runtime.sendMessage({ type: "PAGE_NAVIGATED", url: t.url }).catch(() => {
+  }));
+});
+chrome.tabs.onActivated.addListener((e) => {
+  chrome.tabs.get(e.tabId, (a) => {
+    chrome.runtime.sendMessage({ type: "PAGE_NAVIGATED", url: a.url, source: "tabSwitch" }).catch(() => {
+    });
+  });
+});
+chrome.action.onClicked.addListener((e) => {
+  e.id && (l ? browser.sidebarAction.toggle().catch(console.error) : (chrome.sidePanel.setOptions({ tabId: e.id, path: "sidepanel/index.html", enabled: !0 }).catch(() => {
+  }), chrome.sidePanel.open({ tabId: e.id }).catch(console.error)));
+});
+chrome.runtime.onConnect.addListener((e) => {
+  if (!e.name.startsWith("sidepanel-")) return;
+  const a = parseInt(e.name.split("-")[1], 10);
+  e.onDisconnect.addListener(() => {
+    chrome.tabs.query({ active: !0, windowId: a }, (t) => {
+      const n = t[0];
+      n != null && n.id && chrome.tabs.sendMessage(n.id, { type: "CLEAR_HIGHLIGHTS" }).catch(() => {
+      });
+    });
+  });
+});
+chrome.runtime.onMessage.addListener((e, a, t) => {
+  if (e.target === "sidepanel") {
+    const { target: s, ...c } = e;
+    return chrome.runtime.sendMessage(c).catch(() => {
+    }), t({ ok: !0 }), !0;
+  }
+  if (e.type === "SET_ICON_BY_SCORE") {
+    const s = e.tier === "high" ? "green" : e.tier === "low" ? "red" : "yellow";
+    async function c(r) {
+      const o = chrome.runtime.getURL(`icons/icon${r}-${s}.png`), d = await (await fetch(o)).blob(), m = await createImageBitmap(d), h = new OffscreenCanvas(r, r);
+      return h.getContext("2d").drawImage(m, 0, 0, r, r), h.getContext("2d").getImageData(0, 0, r, r);
+    }
+    async function i(r) {
+      try {
+        const [o, u] = await Promise.all([c(16), c(48)]), d = { imageData: { 16: o, 48: u } };
+        r != null && (d.tabId = r), await chrome.action.setIcon(d);
+      } catch (o) {
+        console.error("Evident setIcon failed", o);
+      }
+      t({ ok: !0 });
+    }
+    return e.tabId != null ? i(e.tabId) : chrome.tabs.query({ active: !0, currentWindow: !0 }, (r) => {
+      var o;
+      return i((o = r[0]) == null ? void 0 : o.id);
+    }), !0;
+  }
+  if (e.target !== "content") return;
+  const n = e.tabId;
+  if (!n) {
+    t({ error: "No tab ID provided" });
+    return;
+  }
+  return (async () => {
+    var s;
+    try {
+      const c = await chrome.tabs.sendMessage(n, e);
+      t(c);
+    } catch (c) {
+      if ((s = c.message) != null && s.includes("Receiving end does not exist"))
+        try {
+          await chrome.scripting.executeScript({ target: { tabId: n }, files: ["content/content.js"] }), await chrome.scripting.insertCSS({ target: { tabId: n }, files: ["content/highlight.css"] });
+          const i = await chrome.tabs.sendMessage(n, e);
+          t(i);
+        } catch (i) {
+          t({ error: i.message });
+        }
+      else
+        t({ error: c.message });
+    }
+  })(), !0;
+});

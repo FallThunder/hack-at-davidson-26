@@ -32,3 +32,5 @@ npm-debug.log*
 *.crx
 *.pem
 evident.zip
+evident-chrome.zip
+evident-firefox.zip

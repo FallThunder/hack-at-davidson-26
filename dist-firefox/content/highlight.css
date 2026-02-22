@@ -1,0 +1,204 @@
+/* Evident highlight styles — injected into every page */
+
+.evident-highlight {
+  border-radius: 2px;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.evident-highlight:hover {
+  filter: brightness(0.9);
+}
+
+/* Urgency 1–2: yellow, dotted border (lightest visual weight) */
+.evident-highlight[data-evident-highlight="urgency-1"],
+.evident-highlight[data-evident-highlight="urgency-2"] {
+  background-color: rgba(255, 215, 0, 0.35) !important;
+  color: #4a3800 !important;
+  border-bottom: 2px dotted #ffd700 !important;
+}
+
+/* Urgency 3: orange, dashed border (medium visual weight) */
+.evident-highlight[data-evident-highlight="urgency-3"] {
+  background-color: rgba(255, 140, 0, 0.35) !important;
+  color: #4a2000 !important;
+  border-bottom: 2px dashed #ff8c00 !important;
+}
+
+/* Urgency 4–5: red, solid border */
+.evident-highlight[data-evident-highlight="urgency-4"],
+.evident-highlight[data-evident-highlight="urgency-5"] {
+  background-color: rgba(255, 68, 68, 0.35) !important;
+  color: #8b0000 !important;
+  border-bottom: 2px solid #ff4444 !important;
+}
+
+/* Urgency 5: thicker solid border (heaviest visual weight) */
+.evident-highlight[data-evident-highlight="urgency-5"] {
+  border-bottom-width: 3px !important;
+}
+
+/* Scroll-to pulse: briefly brighten the span when jumped to from the side panel */
+@keyframes evident-pulse {
+  0%   { filter: brightness(1); }
+  30%  { filter: brightness(0.7); }
+  60%  { filter: brightness(1.15); }
+  100% { filter: brightness(1); }
+}
+
+.evident-highlight-pulse {
+  animation: evident-pulse 1.2s ease;
+}
+
+/* Hover tooltip — shared element on body, positioned via JS */
+.evident-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: fixed;
+  background: #ffffff;
+  color: #111827;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 2147483646;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.evident-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #ffffff;
+}
+
+/* Tooltip — dark mode (attribute set directly on tooltip element in showTooltip()) */
+.evident-tooltip[data-evident-dark] {
+  background: #1a1a1a;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.evident-tooltip[data-evident-dark]::after {
+  border-top-color: #1a1a1a;
+}
+
+/* Tooltip visibility is controlled via JS (mouseenter/mouseleave) */
+
+/* Reduced motion: disable all transitions and animations */
+@media (prefers-reduced-motion: reduce) {
+  .evident-highlight        { transition: none !important; }
+  .evident-highlight-pulse  { animation: none !important; }
+  .evident-tooltip          { transition: none !important; }
+}
+
+/* Click popover — light mode default */
+#evident-popover {
+  position: absolute;
+  z-index: 2147483647;
+  display: none;
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  max-width: 340px;
+  width: max-content;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* Click popover — dark mode */
+[data-evident-dark] #evident-popover {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+#evident-popover.visible {
+  display: block;
+}
+
+#evident-popover .evident-pop-header {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #111827;
+}
+
+[data-evident-dark] #evident-popover .evident-pop-header {
+  color: #cdd6f4;
+}
+
+#evident-popover .evident-pop-excerpt {
+  font-style: italic;
+  color: #6b7280;
+  border-left: 3px solid #d1d5db;
+  margin: 0 0 10px;
+  padding-left: 10px;
+}
+
+[data-evident-dark] #evident-popover .evident-pop-excerpt {
+  color: #a6adc8;
+  border-left-color: #6c7086;
+}
+
+#evident-popover .evident-pop-reasoning {
+  color: #374151;
+  font-size: 12px;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+[data-evident-dark] #evident-popover .evident-pop-reasoning {
+  color: #bac2de;
+}
+
+#evident-popover .evident-pop-sources p {
+  color: #9ca3af;
+  font-size: 11px;
+  margin: 0 0 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[data-evident-dark] #evident-popover .evident-pop-sources p {
+  color: #585b70;
+}
+
+#evident-popover .evident-pop-sources a {
+  display: block;
+  color: #2563eb;
+  font-size: 11px;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+[data-evident-dark] #evident-popover .evident-pop-sources a {
+  color: #89b4fa;
+}
+
+#evident-popover .evident-pop-sources a:hover {
+  text-decoration: underline;
+  color: #1d4ed8;
+}
+
+[data-evident-dark] #evident-popover .evident-pop-sources a:hover {
+  color: #b4d0fa;
+}

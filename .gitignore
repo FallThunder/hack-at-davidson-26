@@ -5,8 +5,9 @@ CLAUDE.md
 # Dependencies
 node_modules/
 
-# Build outpu
+# Build output
 dist/
+dist-firefox/
 build/
 
 # Environment variables

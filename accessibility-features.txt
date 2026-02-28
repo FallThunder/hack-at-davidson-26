@@ -1,0 +1,282 @@
+ACCESSIBILITY FEATURES OF "EVIDENT"
+=====================================
+A Plain-Language Guide for New Users
+=====================================
+
+WHAT IS EVIDENT?
+-----------------
+Evident is a browser extension (currently for Chrome) that analyzes news articles
+and websites for trustworthiness, political bias, factual reporting quality, and
+more. It appears as a side panel while you browse, showing scores, flags, and
+summaries about the page you are reading.
+
+This document describes every accessibility feature built into Evident — both the
+features that make Evident itself easy to use for people with disabilities, and
+the features Evident uses to evaluate how accessible the websites you visit are.
+
+
+PART 1: FEATURES THAT MAKE EVIDENT ITSELF MORE ACCESSIBLE
+===========================================================
+
+1. SCREEN READER SUPPORT
+--------------------------
+Evident is designed to work with screen readers (software like NVDA, JAWS, or
+VoiceOver that reads content aloud for blind or low-vision users).
+
+- Every button that uses only an icon (no visible text) has an invisible label
+  that screen readers will announce. For example, the settings button is labeled
+  "Manage news sites" and the dark mode toggle says "Switch to light mode" or
+  "Switch to dark mode" depending on the current state.
+
+- The "Remove [domain]" buttons in the site management panel each include the
+  site name in their label, so a screen reader won't just say "Remove" — it will
+  say exactly which site will be removed.
+
+- Visual scores and meters (like political bias and factual reporting) are marked
+  up as proper ARIA meter elements, meaning a screen reader can announce a value
+  like "Political bias meter: 60 out of 100."
+
+- The Trust Score circular gauge is labeled with text like "Trust Score: 74 out
+  of 100. Good." so screen reader users get the full picture without relying on
+  the visual chart.
+
+- Decorative icons, emojis, and animated SVG graphics that add no informational
+  value are hidden from screen readers using aria-hidden="true", so they don't
+  clutter the reading experience.
+
+- Loading skeleton cards (the placeholder shapes that appear while analysis is
+  running) are also hidden from screen readers so they are not announced.
+
+- When Evident finishes analyzing a page, or when an error occurs, the update is
+  announced to screen readers automatically via a "live region" — a behind-the-
+  scenes mechanism that tells screen readers to read out new content without the
+  user having to navigate to it.
+
+- Error messages use the "alert" role, which causes screen readers to interrupt
+  and announce the error immediately.
+
+- Collapsible sections (like the "Built-in sites" list) communicate whether they
+  are expanded or collapsed using aria-expanded, so screen reader users always
+  know the current state.
+
+
+2. KEYBOARD NAVIGATION
+-----------------------
+Every interactive element in Evident can be reached and activated using just a
+keyboard — no mouse required.
+
+- Flag cards (the cards showing individual concerns found in an article) can be
+  focused with the Tab key and activated with Enter or Space, just like a button.
+
+- The excerpt inside a flag card (a quote from the article) can also be focused
+  and pressed with Enter or Space to jump directly to that passage in the article.
+
+- The Trust Score gauge is focusable and responds to keyboard focus by showing a
+  visual highlight ring.
+
+- When you open the "Manage news sites" panel, the text input for adding a new
+  site receives focus automatically, so you can start typing right away without
+  clicking.
+
+- In that same panel, pressing Enter in the text input submits the form.
+
+
+3. VISIBLE FOCUS INDICATORS
+-----------------------------
+When you navigate with a keyboard, a visible colored ring appears around the
+element that is currently focused, so you always know where you are on the page.
+
+- Flag cards show an indigo (blue-purple) ring when focused.
+- The excerpt inside a flag card shows a thinner indigo ring.
+- The site input field shows an indigo ring.
+- Focus rings are shown only for keyboard focus (not when clicking with a mouse),
+  reducing visual clutter for mouse users while still helping keyboard users.
+
+
+4. DARK MODE
+-------------
+Evident fully supports both light and dark color schemes.
+
+- When you first install Evident, it automatically checks your operating system's
+  color preference (Settings > Appearance on Windows/Mac/Linux) and uses that.
+
+- You can also manually toggle between light and dark mode using a button in the
+  Evident header. This preference is remembered between sessions.
+
+- Every part of the Evident panel — text, backgrounds, badges, buttons, meters,
+  tooltips, and in-page highlights — has been styled for both modes with
+  sufficient color contrast.
+
+- Page highlights (the colored underlining Evident applies to flagged text in the
+  article itself) also adapt to dark mode using a data attribute on the document.
+
+
+5. REDUCED MOTION SUPPORT
+---------------------------
+Some users experience discomfort, dizziness, or seizures from on-screen
+animations. Evident respects the "Reduce Motion" system setting available on
+Windows, macOS, iOS, Android, and most Linux desktops.
+
+- The Trust Score gauge normally animates from 0 to the final score with a
+  spinning arc. When reduced motion is preferred, it jumps directly to the
+  final number with no animation.
+
+- The "shimmer" loading animation on skeleton cards is disabled when reduced
+  motion is preferred.
+
+- All transitions and animations on in-page highlights and tooltips are
+  disabled when reduced motion is preferred.
+
+- When Evident scrolls the article to show you a flagged passage, it normally
+  uses a smooth scrolling animation. With reduced motion preferred, it jumps
+  instantly instead.
+
+- Fade-in animations on dimension cards and the trust meter are skipped when
+  reduced motion is preferred.
+
+
+6. LISTEN TO SUMMARY (AUDIO ACCESSIBILITY)
+--------------------------------------------
+For users who prefer listening to reading, Evident includes a "Listen to Summary"
+button that reads the article analysis aloud using text-to-speech (powered by
+ElevenLabs). The button's label updates to reflect the current state (e.g.,
+"Loading audio…", "Pause", etc.) so screen reader users always know what will
+happen when they press it.
+
+
+7. SEMANTIC HTML STRUCTURE
+---------------------------
+The Evident landing page (the website where you can download the extension) uses
+proper HTML document structure:
+
+- The page has a single <h1> main heading, followed by <h2> section headings and
+  <h3> subheadings in the correct order — no levels are skipped.
+- Navigation links are in a <nav> element.
+- The main content is wrapped in a <main> element.
+- The footer is in a <footer> element.
+- The page is declared as English with lang="en" on the <html> element.
+- All images have descriptive alt text (e.g., "Evident logo").
+- Links use descriptive text like "Download for Chrome" rather than vague phrases
+  like "click here."
+
+
+8. DOCUMENT METADATA
+---------------------
+All HTML pages in Evident (the extension panel, the landing page, and the
+website) include:
+
+- A proper page title.
+- A language declaration (lang="en") so screen readers know which language to use.
+- A charset declaration (UTF-8) for proper text rendering.
+- A responsive viewport meta tag so the layout works on all screen sizes.
+
+
+==============================================================
+PART 2: EVIDENT'S BUILT-IN ACCESSIBILITY AUDIT FOR WEBSITES
+==============================================================
+
+In addition to analyzing news bias and factuality, Evident also evaluates the
+accessibility of the page you are visiting and gives it an "Accessibility Score"
+out of 100. This score appears in the A11y (accessibility) card in the Evident
+panel.
+
+Here is what Evident checks and how it scores each item:
+
+
+CHECK 1 — LANGUAGE DECLARATION (up to 15 points)
+--------------------------------------------------
+Evident checks whether the page declares what language it is written in using the
+HTML lang attribute. Without this, screen readers may mispronounce words by
+guessing the wrong language.
+
+  Example issue message: "Page is missing a language declaration"
+  This corresponds to WCAG criterion 3.1.1 (Language of Page).
+
+
+CHECK 2 — IMAGES WITH ALT TEXT (up to 20 points)
+--------------------------------------------------
+Evident finds all images on the page and checks whether each one has an alt
+attribute describing what the image shows. Without alt text, blind users receive
+no information about the image.
+
+  Penalty: 5 points per image missing alt text, up to a maximum of 20 points.
+  Example issue message: "Images missing alt text"
+  This corresponds to WCAG criterion 1.1.1 (Non-text Content).
+
+
+CHECK 3 — HEADING LEVEL HIERARCHY (up to 10 points)
+-----------------------------------------------------
+Evident checks that the page's headings go in order (h1, h2, h3…) without
+skipping levels. Skipping from h1 to h3 breaks the logical outline that screen
+reader users rely on to navigate a page.
+
+  Example issue message: "Heading levels are skipped"
+  This corresponds to WCAG criterion 1.3.1 (Info and Relationships).
+
+
+CHECK 4 — DESCRIPTIVE LINK TEXT (up to 15 points)
+---------------------------------------------------
+Evident scans the page for links whose visible text is vague or meaningless
+("click here", "here", "read more", "more", "link", or empty). Screen reader
+users often navigate by jumping from link to link, so each link needs to make
+sense on its own. Evident allows an aria-label override — if a link has a
+meaningful aria-label even though its visible text is generic, it is not flagged.
+
+  Penalty: 5 points per non-descriptive link, up to a maximum of 15 points.
+  Example issue message: "Links with non-descriptive text"
+  This corresponds to WCAG criteria 2.4.4 and 2.4.9 (Link Purpose).
+
+
+CHECK 5 — BUTTONS WITH LABELS (up to 10 points)
+------------------------------------------------
+Evident finds all buttons on the page and checks whether each one has an
+accessible name — either visible text inside the button, an aria-label attribute,
+or a title attribute. Icon-only buttons without any label are invisible to screen
+reader users.
+
+  Penalty: 5 points per unlabeled button, up to a maximum of 10 points.
+  Example issue message: "Buttons with no accessible label"
+  This corresponds to WCAG criterion 4.1.2 (Name, Role, Value).
+
+
+CHECK 6 — PAGE TITLE (up to 10 points)
+----------------------------------------
+Evident checks whether the page has a non-empty <title> element in its HTML.
+The page title is the first thing a screen reader announces when a page loads,
+and it is what appears in browser tabs and bookmarks.
+
+  Example issue message: "Page is missing a title"
+  This corresponds to WCAG criterion 2.4.2 (Page Titled).
+
+
+HOW THE ACCESSIBILITY SCORE IS CALCULATED
+------------------------------------------
+The page starts with a perfect score of 100. Points are deducted for each issue
+found, up to the cap for each category. The final score is displayed with a label:
+
+  90–100 : Excellent
+  70–89  : Good
+  50–69  : Fair
+  0–49   : Poor
+
+Individual issues are listed below the score so you can see exactly what problems
+were found and how many instances there are.
+
+
+==============================================================
+SUMMARY
+==============================================================
+
+Evident is built with accessibility as a first-class concern in two ways:
+
+1. The extension itself is usable by people who rely on screen readers, keyboard
+   navigation, reduced motion settings, dark mode, or audio alternatives.
+
+2. As part of its page analysis, Evident actively audits every page you visit
+   against six key WCAG 2.1 accessibility criteria and gives you a plain-language
+   report — helping you identify which sites are doing well for disabled users
+   and which ones have room to improve.
+
+==============================================================
+End of document
+==============================================================

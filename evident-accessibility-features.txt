@@ -1,0 +1,354 @@
+EVIDENT — ACCESSIBILITY FEATURES OVERVIEW
+==========================================
+Written for someone who has never seen or used the extension.
+Last updated: February 2026
+
+---
+
+WHAT IS EVIDENT?
+----------------
+Evident is a browser extension for Chrome and Firefox. When you visit a news
+article, it opens a side panel and analyzes that article using AI. It tells
+you how trustworthy the article is, flags specific sentences that may contain
+misleading claims, and shows background information about the publisher. All
+of this information is displayed visually in a panel alongside the article.
+
+The following is a complete description of every accessibility feature built
+into the extension.
+
+
+---
+1. SCREEN READER SUPPORT
+---
+
+Evident is designed to work with screen readers — assistive software that
+reads page content aloud for users who are blind or have low vision. Every
+meaningful piece of information has a text alternative so it can be
+understood without looking at the screen.
+
+TRUST SCORE GAUGE
+  The centerpiece of Evident is a circular arc gauge showing the article's
+  trust score from 0 to 100. Visually it looks like a progress ring with a
+  color (green, yellow, orange, or red) and a number in the center. Screen
+  readers skip the visual ring entirely and instead announce a plain-language
+  label, for example: "Trust Score: 72 out of 100. Mostly Reliable."
+
+  The gauge can also be hovered (or focused by keyboard) to reveal a
+  breakdown of the five components that make up the score: Publisher,
+  Bias, Factuality, Tone, and Claims. Each segment appears with its own
+  label and sub-score.
+
+DECORATIVE ICONS AND GRAPHICS
+  All SVG icons that are purely decorative — loading spinners, the search
+  icon shown on empty states, the logo graphic — are marked as hidden from
+  screen readers using aria-hidden="true". This prevents the screen reader
+  from reading out raw SVG code, which would be meaningless.
+
+POLITICAL BIAS BAR
+  The publisher section shows a horizontal bar representing the outlet's
+  political leaning, from left to right. Visually this is a gradient bar
+  with a dot indicator. For screen readers, it is announced as a meter,
+  for example: "Political bias: Center-Left, position 38 out of 100 from
+  left to right."
+
+FACTUAL REPORTING BAR
+  A second bar shows how factually reliable the publisher's reporting
+  historically is. Screen readers hear, for example: "Factual reporting:
+  Mostly Factual, score 72 out of 100."
+
+ARTICLE TONE AND FACTUALITY BADGES
+  Colored pill-shaped badges appear in the publisher section, such as
+  "Neutral" (blue) or "High" (green). Each badge has an accessible label
+  that spells out what it means: "Article tone: Neutral" and
+  "Factuality: High." The color is not the only way the information is
+  conveyed — the text is always present too.
+
+FACT FLAG CARDS
+  When the AI identifies a potentially misleading or unverified claim in
+  the article, it creates a "flag card" in the side panel. Each card shows:
+    - A colored dot and a "3/5" style urgency number (both hidden from
+      screen readers)
+    - A semantic urgency label read aloud instead, e.g.:
+      "Urgency: 3 of 5 — moderate"
+    - The flag type name (e.g., "Missing Context", "Unverified Statistic")
+    - A quoted excerpt from the article
+    - The AI's reasoning
+    - Source links
+
+JUMP-TO-ARTICLE EXCERPTS
+  Inside each flag card, the quoted excerpt from the article is a clickable
+  element. Clicking it scrolls the article to that highlighted passage.
+  For screen readers, this element is labeled: "Jump to this passage in
+  the article."
+
+SHOW MORE / SHOW LESS BUTTONS
+  When a flag card's reasoning text is long, it is initially collapsed to
+  two lines. A "Show more" / "Show less" button expands or collapses it.
+  This button uses aria-expanded so a screen reader announces whether the
+  full text is currently visible or hidden.
+
+ERROR MESSAGES
+  If analysis fails for any reason, an error panel appears. It uses
+  role="alert", which causes screen readers to announce the error
+  immediately and automatically — the user does not have to navigate to it.
+
+LOADING STATUS MESSAGES
+  While analysis is running, a cycling status message appears:
+  "Reading article...", "Analyzing article...", "Checking factual
+  claims...", "Evaluating sources...", "Assessing rhetoric...",
+  "Reviewing statistics..." These messages are inside a live region
+  (role="status" aria-live="polite"), so screen readers announce each
+  new message at a natural pause in reading — without interrupting
+  whatever the user is currently hearing.
+
+SLOW SERVER AND OVERLOADED WARNINGS
+  If the backend is slow or overloaded, warning banners appear in amber.
+  These also use live regions so they are announced to screen reader users
+  automatically.
+
+HIGHLIGHT TOGGLE BUTTON
+  At the bottom of the side panel, a sticky button lets users show or hide
+  the colored highlights injected into the article. This button uses
+  aria-pressed to communicate its current on/off state to screen readers.
+  When analysis is still in progress, the button is disabled and reads
+  "Waiting for analysis..."
+
+FLAG CARD ACTIVE STATE
+  When a user clicks a highlight in the article, the corresponding flag
+  card in the side panel becomes "active" — it is scrolled into view and
+  visually outlined. This selected state is communicated via
+  aria-pressed="true" so screen readers know which flag is currently
+  in focus.
+
+LOADING SKELETON PLACEHOLDERS
+  While data is loading, the panel shows animated gray placeholder cards
+  in the shape of the real cards. These placeholders are marked
+  aria-hidden="true" so screen readers do not read out meaningless
+  placeholder content. The live status message (see above) handles
+  communicating progress instead.
+
+MANAGE SITES MODAL
+  The settings panel for managing which news domains Evident will analyze
+  has a proper heading ("Manage News Sites" as an h2 element). The Close
+  button has aria-label="Close". Each custom domain's remove button is
+  labeled "Remove example.com" — not just an "X" icon with no label.
+
+COLLAPSIBLE BUILT-IN SITES LIST
+  The panel includes a collapsible list of hundreds of built-in supported
+  news domains. The toggle button uses aria-expanded to tell screen readers
+  whether the list is currently shown or hidden.
+
+HEADER BUTTONS
+  The settings (sliders) icon button reads "Manage news sites."
+  The dark/light mode toggle reads "Switch to dark mode" or "Switch to
+  light mode" depending on the current state.
+
+
+---
+2. FULL KEYBOARD NAVIGATION
+---
+
+Every interactive element in Evident can be reached and operated by
+keyboard alone — no mouse is required.
+
+FLAG CARDS
+  Each flag card is focusable with the Tab key. Pressing Enter or Space
+  activates the card, which selects it and scrolls the article to the
+  corresponding highlighted text.
+
+ARTICLE EXCERPT JUMP LINK
+  The quoted excerpt inside a flag card is also keyboard-accessible.
+  Pressing Enter or Space scrolls the article page to that passage.
+
+TRUST METER BREAKDOWN
+  Hovering over the circular gauge reveals the score breakdown into five
+  components. For keyboard users, the gauge ring is focusable with Tab.
+  When it receives focus, the breakdown appears automatically.
+
+DOMAIN INPUT (MANAGE SITES)
+  In the Manage Sites panel, pressing Enter in the domain text field
+  submits the form — matching the standard browser behavior users expect.
+
+FOCUS RINGS
+  Every focusable element displays a visible indigo focus ring when it
+  receives keyboard focus. This makes it easy to see where focus is on
+  screen at all times. The focus ring is suppressed for mouse clicks
+  (using :focus-visible) so it only appears during keyboard navigation.
+
+AUTO-FOCUS ON MODAL OPEN
+  When the Manage Sites panel opens, keyboard focus is automatically moved
+  to the domain input field. Users do not have to Tab through the entire
+  interface to start typing.
+
+NATIVE BUTTON ELEMENTS
+  Interactive elements are implemented as real <button> elements wherever
+  possible rather than styled <div> or <span> elements. This means they
+  automatically receive Tab focus, respond to Enter and Space, and work
+  correctly with all assistive technologies without needing extra code.
+
+
+---
+3. MOTION SENSITIVITY (prefers-reduced-motion)
+---
+
+Evident respects the "Reduce Motion" setting available in Windows, macOS,
+iOS, Android, and Linux. When this system preference is enabled, all
+animations and transitions are adjusted or removed:
+
+TRUST SCORE COUNT-UP ANIMATION
+  Normally the trust score counts up from 0 to its final value over 1.2
+  seconds with an easing curve. With reduced motion enabled, the score
+  appears instantly at its final value — no animation.
+
+SCROLL BEHAVIOR
+  When clicking an excerpt or a flag card causes the article or side panel
+  to scroll, it normally scrolls smoothly. With reduced motion, scrolling
+  is instantaneous.
+
+INLINE HIGHLIGHT HOVER EFFECT
+  Highlighted text in the article normally brightens slightly on hover.
+  With reduced motion, this transition is removed.
+
+HIGHLIGHT PULSE ON SCROLL-TO
+  When the side panel scrolls you to a specific highlight in the article,
+  that highlight normally pulses briefly (brightens and dims) to draw
+  attention. With reduced motion, the pulse animation is disabled.
+
+TOOLTIP FADE
+  The hover tooltip above highlighted text normally fades in. With reduced
+  motion, it appears instantly.
+
+ENTRANCE ANIMATIONS
+  Cards in the side panel use a subtle "fade in and slide up" entrance
+  animation. This animation only plays when motion is safe (it uses the
+  Tailwind CSS motion-safe: prefix, which automatically respects the
+  system preference).
+
+
+---
+4. DARK MODE AND VISUAL COMFORT
+---
+
+AUTOMATIC SYSTEM SYNC
+  Evident reads the operating system's light/dark mode preference on
+  startup and applies the matching theme automatically. If your OS is in
+  dark mode, Evident opens in dark mode.
+
+MANUAL OVERRIDE WITH PERSISTENCE
+  The sun/moon button in the top-right corner of the header lets users
+  manually switch between light and dark mode at any time. The choice is
+  saved to browser storage and remembered across all future sessions.
+
+FULL THEME COVERAGE
+  Dark mode applies consistently to every part of the interface: the side
+  panel background, all cards, the trust meter ring labels, badges, input
+  fields, buttons, borders, text colors, and even the tooltips and click
+  popovers that Evident injects directly onto the news article page.
+
+CONTRAST IN BOTH MODES
+  Both themes use color pairs chosen for readable contrast between
+  foreground text and background surfaces.
+
+
+---
+5. COLOR IS NEVER THE ONLY SIGNAL
+---
+
+Evident never uses color alone to convey meaning. This is important for
+users who are color blind or who use high-contrast display modes.
+
+URGENCY LEVELS (FACT FLAGS)
+  The severity of each fact flag (1 through 5) is communicated using
+  multiple simultaneous signals, not just color:
+
+    Level 1 (very low) — yellow background, dotted bottom border, 2px
+    Level 2 (low)      — yellow background, dotted bottom border, 2px
+    Level 3 (moderate) — orange background, dashed bottom border, 2px
+    Level 4 (high)     — red background, solid bottom border, 2px
+    Level 5 (critical) — red background, solid bottom border, 3px
+
+  In addition, each card shows a "3/5" numeric label (visible to sighted
+  users) and a full semantic label ("Urgency: 3 of 5 — moderate") read
+  aloud to screen reader users.
+
+TRUST SCORE TIERS
+  The trust score arc is colored green, yellow, orange, or red. The same
+  information is also conveyed in the text tier label displayed below the
+  score: "High Trust", "Mostly Reliable", "Use Caution", or "Low Trust."
+
+TONE AND FACTUALITY BADGES
+  These badges use both color and text to communicate their value. For
+  example: "Sensationalist" (orange text on orange background), "Neutral"
+  (blue on blue), "High" (green on green), "Mixed" (yellow on yellow).
+
+PUBLISHER BIAS AND FACTUALITY BARS
+  These gradient bars include text labels at both ends ("Left" / "Right",
+  "Low" / "High") and a text label in the center showing the rated
+  category (e.g., "Political Bias: Center-Left").
+
+
+---
+6. SEMANTIC HTML STRUCTURE
+---
+
+The extension uses the correct HTML elements for their intended purpose,
+which benefits screen readers, keyboard navigation, and browser built-in
+behaviors:
+
+  <blockquote>  — Article excerpts inside flag cards
+  <h2>          — "Manage News Sites" heading in the settings modal
+  <button>      — All interactive controls
+  <input>       — The domain entry field in Manage Sites
+  <a>           — Source links in flag cards, opened in a new tab
+                  with rel="noopener noreferrer" for security
+
+
+---
+7. TRANSPARENT LOADING STATES
+---
+
+Analysis takes several seconds. Evident communicates progress clearly:
+
+  - Animated skeleton (placeholder) cards appear in the panel while data
+    loads, giving a sense of the layout to come. These are hidden from
+    screen readers so they don't create noise.
+
+  - A visible, screen-reader-announced status message cycles through
+    descriptions of what is happening step by step.
+
+  - A 2-minute slow-response warning appears if analysis is unusually slow,
+    both visually and via a screen-reader live region.
+
+  - If the AI backend becomes overloaded, a separate warning appears
+    explaining that the system is retrying automatically.
+
+
+---
+8. WHAT IS NOT YET COVERED
+---
+
+The following accessibility features do not currently exist in Evident and
+represent opportunities for future improvement:
+
+AUDIO / TEXT-TO-SPEECH
+  There is no way for users to have the trust score, flag reasoning,
+  publisher profile, or article excerpts read aloud by a high-quality AI
+  voice. Users who are blind or have low vision rely entirely on their own
+  screen reader software to read the extension. Integrating a service like
+  ElevenLabs to offer an in-extension "Read aloud" button for key content
+  would be a meaningful improvement.
+
+VOICE CONTROL
+  Users cannot speak commands to navigate or interact with the extension.
+
+DEDICATED HIGH-CONTRAST MODE
+  There is no explicit high-contrast visual theme beyond the existing
+  light and dark modes.
+
+LANGUAGE AND INTERNATIONALIZATION
+  All text in the extension is in English only. There is no support for
+  other languages or right-to-left text layouts.
+
+
+---
+END OF DOCUMENT
